@@ -350,7 +350,7 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
         default=False,
         metadata={"help": "Whether use vida."},
     )
-    restore: int = field(
+    restore: float = field(
         default=None,
         metadata={"help": "Whether use stochastic restore and the step for the restore."},
     )

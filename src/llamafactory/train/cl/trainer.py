@@ -118,7 +118,9 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             self.add_callback(BAdamCallback)
 
         if self.finetuning_args.restore:
-            logger.info("Stochastic restore is enabled.")
+            # self.restore_step = int(self.finetuning_args.restore * self.state.max_steps)
+            self.args.restore = self.finetuning_args.restore
+            logger.info(f"Stochastic restore is enabled. restore ratio: {self.finetuning_args.restore}")
             self.model_state = deepcopy(self.model.state_dict())
 
         if self.finetuning_args.scale:
@@ -164,7 +166,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
                 module.scale1 = low.item()
             elif hasattr(module, 'scale2'):
                 module.scale2 = high.item()
-
+    
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
         """
         Perform a training step on a batch of inputs.
@@ -244,14 +246,16 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         else:
             self.accelerator.backward(loss)
         
-        if self.finetuning_args.restore and (self.state.global_step + 1) % self.finetuning_args.restore == 0:
+        if self.finetuning_args.restore and (self.state.global_step + 1) % self.restore_step == 0:
             # Stochastic restore
-            for nm, m  in self.model.named_modules():
-                for npp, p in m.named_parameters():
-                    if npp in ['weight', 'bias'] and p.requires_grad:
-                        mask = (torch.rand(p.shape)<0.001).float().to(self.model.device)
-                        with torch.no_grad():
-                            p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1. - mask)
+            if self.state.max_steps - self.state.global_step >= self.restore_step:
+                logger.info(f"Stochastic restore at step {self.state.global_step}")
+                for nm, m  in self.model.named_modules():
+                    for npp, p in m.named_parameters():
+                        if npp in ['weight', 'bias'] and p.requires_grad:
+                            mask = (torch.rand(p.shape)<0.001).float().to(self.model.device)
+                            with torch.no_grad():
+                                p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1. - mask)
         
         if self.finetuning_args.scale and (self.state.global_step + 1) % self.finetuning_args.scale == 0:
             self.model_ema = update_ema_variables(ema_model=self.model_ema, model=self.model, alpha_teacher=self.alpha_teacher, alpha_vida=self.alpha_vida)

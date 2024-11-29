@@ -57,13 +57,13 @@ def _setup_full_tuning(
             param.requires_grad_(True)
         logger.info("Fine-tuning method: Full")
         
-        forbidden_modules = get_forbidden_modules(model.config, finetuning_args)
-        for name, param in model.named_parameters():
-            if not any(forbidden_module in name for forbidden_module in forbidden_modules):
-                if cast_trainable_params_to_fp32:
-                    param.data = param.data.to(torch.float32)
-            else:
-                param.requires_grad_(False)
+    forbidden_modules = get_forbidden_modules(model.config, finetuning_args)
+    for name, param in model.named_parameters():
+        if not any(forbidden_module in name for forbidden_module in forbidden_modules):
+            if cast_trainable_params_to_fp32:
+                param.data = param.data.to(torch.float32)
+        else:
+            param.requires_grad_(False)
 
 def _setup_freeze_tuning(
     model: "PreTrainedModel",
