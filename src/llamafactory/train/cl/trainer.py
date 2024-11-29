@@ -104,7 +104,8 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
     ) -> None:
         super().__init__(**kwargs)
         self.finetuning_args = finetuning_args
-
+        self.args.restore = self.finetuning_args.restore
+        
         if processor is not None:
             self.add_callback(SaveProcessorCallback(processor))
 
@@ -119,7 +120,6 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
 
         if self.finetuning_args.restore:
             # self.restore_step = int(self.finetuning_args.restore * self.state.max_steps)
-            self.args.restore = self.finetuning_args.restore
             logger.info(f"Stochastic restore is enabled. restore ratio: {self.finetuning_args.restore}")
             self.model_state = deepcopy(self.model.state_dict())
 
