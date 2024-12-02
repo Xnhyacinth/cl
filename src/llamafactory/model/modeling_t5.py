@@ -975,16 +975,38 @@ class T5Stack(T5PreTrainedModel):
                 
             logger.info(f'adaprompt initialized, {self.config.adaprompt} prompts per {self.config.gap_layers} layers for {self.config.n_tasks} tasks. Task_id: {self.task_id}.')
 
+    def post_prompt_init(self):
+        logger.info(f'prompt reinit: {self.task_id}')
+        for e in range(self.config.num_layers // self.config.gap_layers):
+            for name in ['scale1', 'scale2']:
+                if name == 'scale1':
+                    k_name = f'vida_k_{e}'
+                    a_name = f'vida_a_{e}'
+                    w_name = f'vida_w_{e}'
+                else:
+                    k_name = f'vida_k2_{e}'
+                    a_name = f'vida_a2_{e}'
+                    w_name = f'vida_w2_{e}'
+                K = getattr(self, k_name)
+                A = getattr(self, a_name)
+                W = getattr(self, w_name)
+                k = self.gram_schmidt(K)
+                a = self.gram_schmidt(A)
+                w = self.gram_schmidt(W)
+                setattr(self, w_name, w)
+                setattr(self, k_name, k)
+                setattr(self, a_name, a)
+
      # code for this function is modified from:
     # https://github.com/legendongary/pytorch-gram-schmidt/blob/master/gram_schmidt.py
     def gram_schmidt(self, vv):
         def projection(u, v):
             denominator = (u * u).sum()
 
-            if denominator < 1e-8:
-                return None
-            else:
-                return (v * u).sum() / denominator * u
+            # if denominator < 1e-8:
+            #     return None
+            # else:
+            return (v * u).sum() / denominator * u
 
         # check if the tensor is 3D and flatten the last two dimensions if necessary
         is_3d = len(vv.shape) == 3

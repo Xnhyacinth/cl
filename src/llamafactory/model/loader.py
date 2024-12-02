@@ -212,6 +212,13 @@ def load_model(
         model = load_class(model.config)
         model.load_model(state_dict)
         logger.info("Loaded ViDA model.")
+    if finetuning_args.is_vida and finetuning_args.adaprompt and finetuning_args.task_id > 0 and finetuning_args.reinit:
+        if 'llama' in model_args.model_name_or_path.lower():
+            model.model.post_prompt_init()
+        elif 't5' in model_args.model_name_or_path.lower():
+            model.encoder.post_prompt_init()
+            model.decoder.post_prompt_init()
+        
     
     if not is_trainable:
         model.requires_grad_(False)

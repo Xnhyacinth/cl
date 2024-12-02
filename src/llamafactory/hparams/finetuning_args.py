@@ -382,6 +382,10 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
         default=4,
         metadata={"help": "Whether use adaprompt."},
     )
+    reinit: bool = field(
+        default=False,
+        metadata={"help": "Whether use vida."},
+    )
 
     def __post_init__(self):
         def split_arg(arg):
