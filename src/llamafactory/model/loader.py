@@ -143,6 +143,10 @@ def load_model(
             model = load_unsloth_pretrained_model(config, model_args)
 
     if model is None and not lazy_load:
+        if finetuning_args.is_vida and finetuning_args.adaprompt and 'vida' in model_args.model_name_or_path.lower():
+            config.adaprompt = finetuning_args.adaprompt
+            config.n_tasks = finetuning_args.n_tasks
+            config.task_id = finetuning_args.task_id
         init_kwargs["config"] = config
         init_kwargs["pretrained_model_name_or_path"] = model_args.model_name_or_path
 
@@ -197,8 +201,12 @@ def load_model(
         vida_config = {
             "is_vida": finetuning_args.is_vida,
             "vida_rank1": model_args.vida_rank1,
-            "vida_rank2": model_args.vida_rank2
-        }
+            "vida_rank2": model_args.vida_rank2,
+            "adaprompt": finetuning_args.adaprompt,
+            "n_tasks": finetuning_args.n_tasks,
+            "task_id": finetuning_args.task_id,
+            "gap_layers": finetuning_args.gap_layers
+        }   
         model.config.update(vida_config)
         state_dict = model.state_dict()
         model = load_class(model.config)

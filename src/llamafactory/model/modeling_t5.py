@@ -282,7 +282,7 @@ class T5DenseActDense(nn.Module):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        if hasattr(self.config, 'is_vida') and self.config.is_vida:
+        if hasattr(self.wo, 'linear_vida'):
             if (
                 isinstance(self.wo.linear_vida.weight, torch.Tensor)
                 and hidden_states.dtype != self.wo.linear_vida.weight.dtype
@@ -318,7 +318,7 @@ class T5DenseGatedActDense(nn.Module):
         # To make 8bit quantization work for google/flan-t5-xxl, self.wo is kept in float32.
         # See https://github.com/huggingface/transformers/issues/20287
         # we also make sure the weights are not in `int8` in case users will force `_keep_in_fp32_modules` to be `None``
-        if hasattr(self.config, 'is_vida') and self.config.is_vida:
+        if hasattr(self.wo, 'linear_vida'):
             if (
                 isinstance(self.wo.linear_vida.weight, torch.Tensor)
                 and hidden_states.dtype != self.wo.linear_vida.weight.dtype
@@ -668,7 +668,7 @@ class T5Block(nn.Module):
             self.layer.append(T5LayerCrossAttention(config))
 
         self.layer.append(T5LayerFF(config))
-
+       
     def forward(
         self,
         hidden_states,
@@ -913,6 +913,16 @@ class T5PreTrainedModel(PreTrainedModel):
 
         return shifted_input_ids
 
+def tensor_prompt(a, b, c=None, ortho=False):
+    if c is None:
+        p = torch.nn.Parameter(torch.FloatTensor(a,b), requires_grad=True)
+    else:
+        p = torch.nn.Parameter(torch.FloatTensor(a,b,c), requires_grad=True)
+    if ortho:
+        nn.init.orthogonal_(p)
+    else:
+        nn.init.uniform_(p)
+    return p  
 
 class T5Stack(T5PreTrainedModel):
     def __init__(self, config, embed_tokens=None):
@@ -933,6 +943,132 @@ class T5Stack(T5PreTrainedModel):
         self.model_parallel = False
         self.device_map = None
         self.gradient_checkpointing = False
+        
+    def prompt_init(self):
+        # adaprompt
+        if 'adaprompt' in self.config.to_dict().keys() and self.config.adaprompt:
+            self.train_mode = True
+            self.task_id = self.config.task_id
+            self.num_prompt = self.config.adaprompt * self.config.n_tasks
+            for e in range(self.config.num_layers // self.config.gap_layers):
+            # setattr(self, f'e_a_{e}',a)
+                k = tensor_prompt(self.num_prompt, self.config.d_model)
+                a = tensor_prompt(self.num_prompt, self.config.d_model)
+                w = tensor_prompt(self.num_prompt, self.config.d_model)
+                k = self.gram_schmidt(k)
+                a = self.gram_schmidt(a)
+                w = self.gram_schmidt(a)
+                
+                k2 = tensor_prompt(self.num_prompt, self.config.d_model)
+                a2 = tensor_prompt(self.num_prompt, self.config.d_model)
+                w2 = tensor_prompt(self.num_prompt, self.config.d_model)
+                k2 = self.gram_schmidt(k2)
+                a2 = self.gram_schmidt(a2)
+                w2 = self.gram_schmidt(w2)
+                
+                setattr(self, f'vida_k_{e}', k)
+                setattr(self, f'vida_a_{e}', a)
+                setattr(self, f'vida_w_{e}', w)
+                setattr(self, f'vida_k2_{e}', k2)
+                setattr(self, f'vida_a2_{e}', a2)
+                setattr(self, f'vida_w2_{e}', w2)
+                
+            logger.info(f'adaprompt initialized, {self.config.adaprompt} prompts per {self.config.gap_layers} layers for {self.config.n_tasks} tasks. Task_id: {self.task_id}.')
+
+     # code for this function is modified from:
+    # https://github.com/legendongary/pytorch-gram-schmidt/blob/master/gram_schmidt.py
+    def gram_schmidt(self, vv):
+        def projection(u, v):
+            denominator = (u * u).sum()
+
+            if denominator < 1e-8:
+                return None
+            else:
+                return (v * u).sum() / denominator * u
+
+        # check if the tensor is 3D and flatten the last two dimensions if necessary
+        is_3d = len(vv.shape) == 3
+        if is_3d:
+            shape_2d = copy.deepcopy(vv.shape)
+            vv = vv.view(vv.shape[0],-1)
+
+        # swap rows and columns
+        vv = vv.T
+
+        # process matrix size
+        nk = vv.size(1)
+        uu = torch.zeros_like(vv, device=vv.device)
+
+        # get starting point
+        pt = int(self.config.adaprompt)
+        s = int(self.task_id * pt)
+        f = int((self.task_id + 1) * pt)
+        if s > 0:
+            uu[:, 0:s] = vv[:, 0:s].clone()
+        for k in range(s, f):
+            redo = True
+            while redo:
+                redo = False
+                vk = torch.randn_like(vv[:,k]).to(vv.device)
+                uk = 0
+                for j in range(0, k):
+                    if not redo:
+                        uj = uu[:, j].clone()
+                        proj = projection(uj, vk)
+                        if proj is None:
+                            redo = True
+                            print('restarting!!!')
+                        else:
+                            uk = uk + proj
+                if not redo: uu[:, k] = vk - uk
+        for k in range(s, f):
+            uk = uu[:, k].clone()
+            uu[:, k] = uk / (uk.norm())
+
+        # undo swapping of rows and columns
+        uu = uu.T 
+
+        # return from 2D
+        if is_3d:
+            uu = uu.view(shape_2d)
+        
+        return torch.nn.Parameter(uu) 
+    
+    def get_scale(self, input, name, e):
+        if name == 'scale1':
+            k_name = f'vida_k_{e}'
+            a_name = f'vida_a_{e}'
+            w_name = f'vida_w_{e}'
+        else:
+            k_name = f'vida_k2_{e}'
+            a_name = f'vida_a2_{e}'
+            w_name = f'vida_w2_{e}'
+        K = getattr(self, k_name)
+        A = getattr(self, a_name)
+        W = getattr(self, w_name)
+        pt = int(self.config.adaprompt)
+        s = int(self.task_id * pt)
+        f = int((self.task_id + 1) * pt)
+        
+        if self.train_mode:
+            if self.task_id > 0:
+                K = torch.cat((K[:s].detach().clone(), K[s:f]), dim=0)
+                A = torch.cat((A[:s].detach().clone(), A[s:f]), dim=0)
+                W = torch.cat((W[:s].detach().clone(), W[s:f]), dim=0)
+            else:
+                K = K[s:f]
+                A = A[s:f]
+                W = W[s:f]
+        else:
+            K = K[0:f]
+            A = A[0:f]
+            W = W[0:f]
+        a_q = torch.einsum('bld, kd -> blk', input, A)
+        K = nn.functional.normalize(K, dim=-1)
+        a_q = nn.functional.normalize(a_q, dim=-1)
+        sim = torch.einsum('blk, kd -> blk', a_q, K) / (input.size(-1) ** 0.5)
+        return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1)
+    
 
     @add_start_docstrings(PARALLELIZE_DOCSTRING)
     def parallelize(self, device_map=None):
@@ -984,6 +1120,13 @@ class T5Stack(T5PreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
+    def set_scale(self, update_model, high, low):
+        for name, module in update_model.named_modules():
+            if hasattr(module, 'scale1'):
+                module.scale1 = low
+            if hasattr(module, 'scale2'):
+                module.scale2 = high
+    
     def forward(
         self,
         input_ids=None,
@@ -1105,6 +1248,14 @@ class T5Stack(T5PreTrainedModel):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
+            if 'adaprompt' in self.config.to_dict().keys() and self.config.adaprompt:
+                if i % self.config.gap_layers == 0:
+                    e = i // self.config.gap_layers
+                    scale1 = self.get_scale(hidden_states, 'scale1', e)
+                    scale2 = self.get_scale(hidden_states, 'scale2', e)
+                    self.set_scale(self.block[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1))
+                    # breakpoint()
+            
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
                     layer_module.forward,

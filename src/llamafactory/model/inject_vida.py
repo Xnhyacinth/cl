@@ -25,14 +25,20 @@ class ViDAInjectedLinear(nn.Module):
         self.vida_up2 = nn.Linear(r2, out_features, bias=False)
         self.scale1 = 1.0
         self.scale2 = 1.0
-
+        
         nn.init.normal_(self.vida_down.weight, std=1 / r**2)
         nn.init.zeros_(self.vida_up.weight)
 
         nn.init.normal_(self.vida_down2.weight, std=1 / r2**2)
         nn.init.zeros_(self.vida_up2.weight)
 
+   
+    
     def forward(self, input):
+        # try:
+        #     x = self.linear_vida(input) + self.vida_up(self.vida_down(input)) * self.scale1 + self.vida_up2(self.vida_down2(input)) * self.scale2
+        # except:
+        #     breakpoint()
         return self.linear_vida(input) + self.vida_up(self.vida_down(input)) * self.scale1 + self.vida_up2(self.vida_down2(input)) * self.scale2
 
 def uninject_trainable_vida(model: nn.Module, target_replace_module: List[str] = ["CrossAttention", "Attention"]):
@@ -52,12 +58,11 @@ def uninject_trainable_vida(model: nn.Module, target_replace_module: List[str] =
                     _module._modules[name] = original_linear
 
 
-
 def inject_trainable_vida(
     model: nn.Module,
     target_replace_module: List[str] = ["CrossAttention", "Attention"],
     r: int = 4,
-    r2: int = 16,
+    r2: int = 16
 ):
     """
     inject vida into model, and returns vida parameter groups.
@@ -85,7 +90,7 @@ def inject_trainable_vida(
                         _child_module.out_features,
                         _child_module.bias is not None,
                         r,
-                        r2,
+                        r2
                     )
                     _tmp.linear_vida.weight = weight
                     if bias is not None:
@@ -112,5 +117,5 @@ def inject_trainable_vida(
                     _module._modules[name].vida_up2.weight.requires_grad = True
                     _module._modules[name].vida_down2.weight.requires_grad = True
                     names.append(name)
-
+    
     return require_grad_params, names

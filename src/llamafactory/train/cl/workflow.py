@@ -50,13 +50,15 @@ def run_cl(
     tokenizer = tokenizer_module["tokenizer"]
     template = get_template_and_fix_tokenizer(tokenizer, data_args)
     dataset_module = get_dataset(template, model_args, data_args, training_args, stage="cl", **tokenizer_module)
+    finetuning_args.n_tasks = len(data_args.orders)
+    training_args.adaprompt = finetuning_args.adaprompt
     # import pdb; pdb.set_trace()
     # print(dataset_module['train_dataset'][0])
     if data_args.select and training_args.do_train:
         print(f"Selecting data... {data_args.select}")
-        # for key in dataset_module:
-        key = 'train_dataset'
-        dataset_module[key] = dataset_module[key].shuffle(seed=training_args.seed).select(range(min(len(dataset_module[key]), data_args.select)))
+        for key in dataset_module:
+        # key = 'train_dataset'
+            dataset_module[key] = dataset_module[key].shuffle(seed=training_args.seed).select(range(min(len(dataset_module[key]), data_args.select)))
         print(dataset_module)
     model = load_model(tokenizer, model_args, finetuning_args, training_args.do_train)
 

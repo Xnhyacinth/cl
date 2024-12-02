@@ -370,6 +370,18 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
         default=0.99,
         metadata={"help": "The threshold of uncertainty."},
     )
+    adaprompt: int = field(
+        default=None,
+        metadata={"help": "Whether use adaprompt."},
+    )
+    task_id: int = field(
+        default=None,
+        metadata={"help": "Whether use adaprompt."},
+    )
+    gap_layers: int = field(
+        default=4,
+        metadata={"help": "Whether use adaprompt."},
+    )
 
     def __post_init__(self):
         def split_arg(arg):

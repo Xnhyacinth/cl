@@ -209,7 +209,8 @@ def _get_preprocessed_dataset(
         return {
             "Task": examples['_prompt'][0]['content'].split("Task:")[1].split('\n')[0],
             "Dataset": examples['_prompt'][0]['content'].split("Dataset:")[1].split('\n')[0],
-            "Instance": {"id": idx, "instruction": examples['_prompt'][0]['content'], "label": examples['_response'][0]['content']}
+            "Instance": {"id": idx, "instruction": examples['_prompt'][0]['content'], "label": examples['_response'][0]['content']},
+            "task_id": data_args.orders.index(examples['_prompt'][0]['content'].split("Dataset:")[1].split('\n')[0]),
         }
     dataset = dataset.map(extract_task_and_dataset, with_indices=True)
     dataset = dataset.map(

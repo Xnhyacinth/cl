@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 def get_preprocess_and_print_func(
     data_args: "DataArguments",
-    stage: Literal["pt", "sft", "rm", "ppo", "kto"],
+    stage: Literal["pt", "sft", "rm", "ppo", "kto", "cl"],
     template: "Template",
     tokenizer: "PreTrainedTokenizer",
     processor: Optional["ProcessorMixin"],

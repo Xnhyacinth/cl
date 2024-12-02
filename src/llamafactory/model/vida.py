@@ -11,34 +11,36 @@ from time import time
 import logging
 
 
-# , iteration):
-def update_ema_variables(ema_model, model, alpha_teacher, alpha_vida):
-    # for ema_param, param in zip(ema_model.parameters(), model.parameters()):
-    #     ema_param.data[:] = alpha_teacher * ema_param[:].data[:] + (1 - alpha_teacher) * param[:].data[:]
-    # return ema_model
-    for ema_param, (name, param) in zip(ema_model.parameters(), model.named_parameters()):
-        # ema_param.data.mul_(alpha).add_(1 - alpha, param.data)
-        if "vida_" in name:
-            ema_param.data[:] = alpha_vida * ema_param[:].data[:] + \
-                (1 - alpha_vida) * param[:].data[:]
-        else:
-            ema_param.data[:] = alpha_teacher * ema_param[:].data[:] + \
-                (1 - alpha_teacher) * param[:].data[:]
-    return ema_model
-
-
 class LlamaVida(LlamaForCausalLM):
     def __init__(self, config):
+        if 'adaprompt' not in config.to_dict().keys():
+            config.adaprompt = None
+        if 'n_tasks' not in config.to_dict().keys():
+            config.n_tasks = None
+        if 'task_id' not in config.to_dict().keys():
+            config.task_id = None
+        if 'gap_layers' not in config.to_dict().keys():
+            config.gap_layers = None
         super().__init__(config)
         self.wrap_model()
 
     def wrap_model(self):
         inject_trainable_vida(self, target_replace_module=[
                               "LlamaMLP", "LlamaSdpaAttention", "LlamaAttention", "LlamaFlashAttention2"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        if self.config.adaprompt:
+            self.model.prompt_init()
 
     def unwrap_model(self):
         uninject_trainable_vida(self, target_replace_module=[
                                 "LlamaMLP", "LlamaSdpaAttention", "LlamaAttention", "LlamaFlashAttention2"])
+        if self.config.adaprompt:
+            for e in range(self.config.num_hidden_layers // self.config.gap_layers):
+                delattr(self.model, f"vida_a_{e}")
+                delattr(self.model, f"vida_k_{e}")
+                delattr(self.model, f"vida_w_{e}")
+                delattr(self.model, f"vida_w2_{e}")
+                delattr(self.model, f"vida_a2_{e}")
+                delattr(self.model, f"vida_k2_{e}")
 
     def load_model(self, state_dict):
         self.unwrap_model()
@@ -80,16 +82,48 @@ class LlamaVida(LlamaForCausalLM):
 
 class T5Vida(T5ForConditionalGeneration):
     def __init__(self, config):
+        if 'adaprompt' not in config.to_dict().keys():
+            config.adaprompt = None
+        if 'n_tasks' not in config.to_dict().keys():
+            config.n_tasks = None
+        if 'task_id' not in config.to_dict().keys():
+            config.task_id = None
+        if 'gap_layers' not in config.to_dict().keys():
+            config.gap_layers = None
         super().__init__(config)
         self.wrap_model()
 
     def wrap_model(self):
+        # if self.config.adaprompt:
+        #     inject_trainable_vida(self, target_replace_module=["T5Attention"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        # else:
         inject_trainable_vida(self, target_replace_module=[
-                              "T5Attention", "T5DenseActDense"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+                            "T5Attention", "T5DenseActDense"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        
+        if self.config.adaprompt:
+            self.decoder.prompt_init()
+            self.encoder.prompt_init()
 
     def unwrap_model(self):
-        uninject_trainable_vida(self, target_replace_module=[
-                                "T5Attention", "T5DenseActDense"])
+        # if self.config.adaprompt:
+        #     uninject_trainable_vida(self, target_replace_module=["T5Attention"])
+        # else:
+        uninject_trainable_vida(self, target_replace_module=["T5Attention", "T5DenseActDense"])
+        if self.config.adaprompt:
+            for e in range(self.config.num_layers // self.config.gap_layers):
+                delattr(self.decoder, f"vida_a_{e}")
+                delattr(self.decoder, f"vida_k_{e}")
+                delattr(self.decoder, f"vida_w_{e}")
+                delattr(self.decoder, f"vida_w2_{e}")
+                delattr(self.decoder, f"vida_a2_{e}")
+                delattr(self.decoder, f"vida_k2_{e}")
+                # if self.config.is_encoder_decoder:
+                delattr(self.encoder, f"vida_a_{e}")
+                delattr(self.encoder, f"vida_k_{e}")
+                delattr(self.encoder, f"vida_w_{e}")
+                delattr(self.encoder, f"vida_w2_{e}")
+                delattr(self.encoder, f"vida_a2_{e}")
+                delattr(self.encoder, f"vida_k2_{e}")
 
     def load_model(self, state_dict):
         self.unwrap_model()
@@ -136,6 +170,127 @@ class T5Vida(T5ForConditionalGeneration):
 
     def generate(self, **kwargs):
         return super().generate(**kwargs)
+
+def tensor_prompt(a, b, c=None, ortho=False):
+    if c is None:
+        p = torch.nn.Parameter(torch.FloatTensor(a,b), requires_grad=True)
+    else:
+        p = torch.nn.Parameter(torch.FloatTensor(a,b,c), requires_grad=True)
+    if ortho:
+        nn.init.orthogonal_(p)
+    else:
+        nn.init.uniform_(p)
+    return p  
+
+    # code for this function is modified from:
+# https://github.com/legendongary/pytorch-gram-schmidt/blob/master/gram_schmidt.py
+def gram_schmidt(vv, adaprompt, task_id):
+    def projection(u, v):
+        denominator = (u * u).sum()
+
+        if denominator < 1e-8:
+            return None
+        else:
+            return (v * u).sum() / denominator * u
+
+    # check if the tensor is 3D and flatten the last two dimensions if necessary
+    is_3d = len(vv.shape) == 3
+    if is_3d:
+        shape_2d = copy.deepcopy(vv.shape)
+        vv = vv.view(vv.shape[0],-1)
+
+    # swap rows and columns
+    vv = vv.T
+
+    # process matrix size
+    nk = vv.size(1)
+    uu = torch.zeros_like(vv, device=vv.device)
+
+    # get starting point
+    pt = int(adaprompt)
+    s = int(task_id * pt)
+    f = int((task_id + 1) * pt)
+    if s > 0:
+        uu[:, 0:s] = vv[:, 0:s].clone()
+    for k in range(s, f):
+        redo = True
+        while redo:
+            redo = False
+            vk = torch.randn_like(vv[:,k]).to(vv.device)
+            uk = 0
+            for j in range(0, k):
+                if not redo:
+                    uj = uu[:, j].clone()
+                    proj = projection(uj, vk)
+                    if proj is None:
+                        redo = True
+                        print('restarting!!!')
+                    else:
+                        uk = uk + proj
+            if not redo: uu[:, k] = vk - uk
+    for k in range(s, f):
+        uk = uu[:, k].clone()
+        uu[:, k] = uk / (uk.norm())
+
+    # undo swapping of rows and columns
+    uu = uu.T 
+
+    # return from 2D
+    if is_3d:
+        uu = uu.view(shape_2d)
+    
+    return torch.nn.Parameter(uu) 
+    
+def get_scale(input, name, e, config, task_id, train_mode, model):
+    if name == 'scale1':
+        k_name = f'vida_k_{e}'
+        a_name = f'vida_a_{e}'
+        w_name = f'vida_w_{e}'
+    else:
+        k_name = f'vida_k2_{e}'
+        a_name = f'vida_a2_{e}'
+        w_name = f'vida_w2_{e}'
+    K = getattr(model, k_name)
+    A = getattr(model, a_name)
+    W = getattr(model, w_name)
+    pt = int(adaprompt)
+    s = int(task_id * pt)
+    f = int((task_id + 1) * pt)
+    
+    if train_mode:
+        if task_id > 0:
+            K = torch.cat((K[:s].detach().clone(), K[s:f]), dim=0)
+            A = torch.cat((A[:s].detach().clone(), A[s:f]), dim=0)
+            W = torch.cat((W[:s].detach().clone(), W[s:f]), dim=0)
+        else:
+            K = K[s:f]
+            A = A[s:f]
+            W = W[s:f]
+    else:
+        K = K[0:f]
+        A = A[0:f]
+        W = W[0:f]
+    a_q = torch.einsum('bld, kd -> blk', input, A)
+    K = nn.functional.normalize(K, dim=-1)
+    a_q = nn.functional.normalize(a_q, dim=-1)
+    sim = torch.einsum('blk, kd -> blk', a_q, K) / (input.size(-1) ** 0.5)
+    return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1)
+
+# , iteration):
+def update_ema_variables(ema_model, model, alpha_teacher, alpha_vida):
+    # for ema_param, param in zip(ema_model.parameters(), model.parameters()):
+    #     ema_param.data[:] = alpha_teacher * ema_param[:].data[:] + (1 - alpha_teacher) * param[:].data[:]
+    # return ema_model
+    for ema_param, (name, param) in zip(ema_model.parameters(), model.named_parameters()):
+        # ema_param.data.mul_(alpha).add_(1 - alpha, param.data)
+        if "vida_" in name:
+            ema_param.data[:] = alpha_vida * ema_param[:].data[:] + \
+                (1 - alpha_vida) * param[:].data[:]
+        else:
+            ema_param.data[:] = alpha_teacher * ema_param[:].data[:] + \
+                (1 - alpha_teacher) * param[:].data[:]
+    return ema_model
+
 
 
 

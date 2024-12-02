@@ -167,6 +167,11 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             elif hasattr(module, 'scale2'):
                 module.scale2 = high.item()
     
+    def set_train(self, update_model, train_mode):
+        for name, module in update_model.named_modules():
+            if hasattr(module, 'train_mode'):
+                module.train_mode = train_mode
+    
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
         """
         Perform a training step on a batch of inputs.
@@ -186,6 +191,9 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             `torch.Tensor`: The tensor with training loss on this batch.
         """
         model.train()
+        # if self.finetuning_args.adaprompt:
+        task_id = inputs.pop("task_id")
+        # inputs = {key: inputs for key in ("input_ids", "attention_mask", "labels", "token_type_ids", "decoder_input_ids")}
         inputs = self._prepare_inputs(inputs)
 
         if self.finetuning_args.scale and (self.state.global_step + 1) % self.finetuning_args.scale == 0:
@@ -253,7 +261,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
                 for nm, m  in self.model.named_modules():
                     for npp, p in m.named_parameters():
                         if npp in ['weight', 'bias'] and p.requires_grad:
-                            mask = (torch.rand(p.shape)<0.001).float().to(self.model.device)
+                            mask = (torch.rand(p.shape)<0.00001).float().to(self.model.device)
                             with torch.no_grad():
                                 p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1. - mask)
         
@@ -317,7 +325,14 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             self.set_scale(update_model=model, high=lambda_high, low=lambda_low)
             self.set_scale(update_model=self.model_ema, high=lambda_high, low=lambda_low)
             # breakpoint()
-        
+        task_id = inputs.pop('task_id')
+        if self.args.adaprompt:
+            if 't5' in self.model.config.architectures[0].lower():
+                self.model.encoder.task_id = task_id[0]
+                self.model.decoder.task_id = task_id[0]
+            elif 'llama' in self.model.config.architectures[0].lower():
+                self.model.model.task_id = task_id[0]
+                
         loss, generated_tokens, _ = super().prediction_step(  # ignore the returned labels (may be truncated)
             model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
         )
@@ -450,6 +465,9 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         # Will be useful when we have an iterable dataset so don't know its length.
         observed_num_examples = 0
 
+        if self.args.adaprompt:
+            self.set_train(self.model, False)
+    
         # Main evaluation loop
         for step, inputs in enumerate(dataloader):
             # Update the observed num examples

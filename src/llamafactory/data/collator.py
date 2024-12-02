@@ -96,11 +96,10 @@ class MultiModalDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
             token_type_ids = mm_inputs.pop("token_type_ids")
             for i, feature in enumerate(features):
                 feature["token_type_ids"] = token_type_ids[i]
-        move_keys = [key if key not in ("input_ids", "attention_mask", "labels", "token_type_ids") else None for key in features[0].keys()]
+        move_keys = [key for key in features[0].keys() if key not in ("input_ids", "attention_mask", "labels", "token_type_ids", "task_id")]
         for key in move_keys:
-            if key is not None:
-                for feature in features:
-                    feature.pop(key)
+            for feature in features:
+                feature.pop(key)
         features: Dict[str, "torch.Tensor"] = super().__call__(features)
         features.update(mm_inputs)
         return features

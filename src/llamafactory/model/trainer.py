@@ -2056,6 +2056,11 @@ class Trainer:
                 ignore_keys_for_eval=ignore_keys_for_eval,
             )
 
+    def set_train(self, model, train_mode):
+        for name, module in model.named_modules():
+            if hasattr(module, 'train_mode'):
+                module.train_mode = train_mode
+    
     def _inner_training_loop(
         self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
     ):
@@ -2303,7 +2308,10 @@ class Trainer:
         if self.args.restore:
             self.restore_step = int(self.args.restore * self.state.max_steps)
             logger.info(f"Stochastic restore step: {self.restore_step}")
-            
+        
+        if self.args.adaprompt:
+            self.set_train(self.model, True)
+    
         # tr_loss is a tensor to avoid synchronization of TPUs through .item()
         tr_loss = torch.tensor(0.0).to(args.device)
         # _total_loss_scalar is updated everytime .item() has to be called on tr_loss and stores the sum of all losses

@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 
 @dataclass
@@ -116,6 +116,10 @@ class DataArguments:
     select: Optional[int] = field(
         default=None,
         metadata={"help": "For debugging purposes, truncate the number of examples for each dataset."},
+    )
+    orders: List[str] = field(
+        default_factory=list, 
+        metadata={"help": "List of orders."}
     )
 
     def __post_init__(self):
