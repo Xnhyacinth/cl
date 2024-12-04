@@ -56,8 +56,8 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 # sudo apt install alipay-linkc-zeta-0.14.0 -b current
 # ps -ef |grep _ortho_mu|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 50_adaprompt4|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep 4,5|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep restore|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep 0,4|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep e2.sh|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep restore0.5|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep 0.5|grep -v grep |cut -c 9-16|xargs kill -9
