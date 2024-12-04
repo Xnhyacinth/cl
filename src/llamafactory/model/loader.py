@@ -205,14 +205,21 @@ def load_model(
             "adaprompt": finetuning_args.adaprompt,
             "n_tasks": finetuning_args.n_tasks,
             "task_id": finetuning_args.task_id,
-            "gap_layers": finetuning_args.gap_layers
+            "gap_layers": finetuning_args.gap_layers,
+            "ortho_mu": finetuning_args.ortho_mu
         }   
         model.config.update(vida_config)
         state_dict = model.state_dict()
         model = load_class(model.config)
         model.load_model(state_dict)
         logger.info("Loaded ViDA model.")
-    if finetuning_args.is_vida and finetuning_args.adaprompt and finetuning_args.task_id > 0 and finetuning_args.reinit:
+        if finetuning_args.adaprompt:
+            if 'llama' in model_args.model_name_or_path.lower():
+                model.model.post_prompt_init()
+            elif 't5' in model_args.model_name_or_path.lower():
+                model.encoder.post_prompt_init()
+                model.decoder.post_prompt_init()
+    elif finetuning_args.is_vida and finetuning_args.adaprompt and finetuning_args.task_id > 0 and finetuning_args.reinit and '_eval' not in finetuning_args.output_dir:
         if 'llama' in model_args.model_name_or_path.lower():
             model.model.post_prompt_init()
         elif 't5' in model_args.model_name_or_path.lower():

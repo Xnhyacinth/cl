@@ -947,7 +947,7 @@ class T5Stack(T5PreTrainedModel):
     def prompt_init(self):
         # adaprompt
         if 'adaprompt' in self.config.to_dict().keys() and self.config.adaprompt:
-            # self.train_mode = True
+            self.train_mode = True
             self.task_id = self.config.task_id
             self.num_prompt = self.config.adaprompt * self.config.n_tasks
             for e in range(self.config.num_layers // self.config.gap_layers):
@@ -1072,7 +1072,7 @@ class T5Stack(T5PreTrainedModel):
         s = int(self.task_id * pt)
         f = int((self.task_id + 1) * pt)
         
-        if self.training:
+        if self.train_mode:
             if self.task_id > 0:
                 K = torch.cat((K[:s].detach().clone(), K[s:f]), dim=0)
                 A = torch.cat((A[:s].detach().clone(), A[s:f]), dim=0)
@@ -1090,11 +1090,11 @@ class T5Stack(T5PreTrainedModel):
         a_q = nn.functional.normalize(a_q, dim=-1)
         sim = torch.einsum('blk, kd -> blk', a_q, K) / (input.size(-1) ** 0.5)
         ortho_loss = None
-        if self.config.ortho_mu and self.training:
+        if self.config.ortho_mu:
             ortho_loss = self.ortho_penalty(K) * self.config.ortho_mu
             ortho_loss += self.ortho_penalty(A) * self.config.ortho_mu
             ortho_loss += self.ortho_penalty(W) * self.config.ortho_mu
-            # breakpoint()
+            breakpoint()
             ortho_loss /= 3
         return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
     
@@ -1222,12 +1222,10 @@ class T5Stack(T5PreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
+
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.is_decoder and encoder_hidden_states is not None:
-            # if self.config.ortho_mu:
-            #     # self.training = True
-            #     breakpoint()
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
@@ -1256,7 +1254,7 @@ class T5Stack(T5PreTrainedModel):
         encoder_decoder_position_bias = None
 
         hidden_states = self.dropout(inputs_embeds)
-        if self.config.ortho_mu and self.training:
+        if self.config.ortho_mu:
             ortho_loss = []
         else:
             ortho_loss = None
@@ -1290,7 +1288,7 @@ class T5Stack(T5PreTrainedModel):
                     e = i // self.config.gap_layers
                     scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
                     scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
-                    if self.config.ortho_mu and self.training:
+                    if self.config.ortho_mu:
                         ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
                     self.set_scale(self.block[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1))
                     # breakpoint()
@@ -1372,7 +1370,7 @@ class T5Stack(T5PreTrainedModel):
                 ]
                 if v is not None
             )
-        if self.config.ortho_mu and self.training:
+        if self.config.ortho_mu:
             ortho_loss = torch.mean(torch.stack(ortho_loss))
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
@@ -1988,7 +1986,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel, GenerationMixin):
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
             return ((loss,) + output) if loss is not None else output
 
-        if self.config.ortho_mu and self.training:
+        if self.config.ortho_mu:
             loss += (ortho_loss_en + ortho_loss_de) / 2
         
         return Seq2SeqLMOutput(

@@ -22,17 +22,17 @@ datasets="llama2_3500_lower llama2_3500_upper"
 #     echo "Item: $item"
 #     bash config/run.sh 1 1 llama2-7b lora 16 constant 1e-4 ${item} all 0 16
 # doneanks="4 2"
-ranks="4"
-for item in $ranks; do
-    echo "Item: $item"
-    if [ "$item" = "2" ];then
-        r2=32
-    fi
-    if [ "$item" = "4" ];then
-        r2=16
-    fi
-    bash config/run2.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
-done
+# ranks="4"
+# for item in $ranks; do
+#     echo "Item: $item"
+#     if [ "$item" = "2" ];then
+#         r2=32
+#     fi
+#     if [ "$item" = "4" ];then
+#         r2=16
+#     fi
+#     bash config/run4.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
+# done
 ranks="2"
 for item in $ranks; do
     echo "Item: $item"
@@ -42,7 +42,7 @@ for item in $ranks; do
     if [ "$item" = "4" ];then
         r2=16
     fi
-    bash config/run1.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
+    bash config/run4.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
 done
 ranks="4 2"
 for item in $ranks; do
@@ -53,7 +53,7 @@ for item in $ranks; do
     if [ "$item" = "4" ];then
         r2=8
     fi
-    bash config/run1.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
+    bash config/run4.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4
 done
 
 # nohup bash config/t1.sh > logs/t1.log 2>&1 &

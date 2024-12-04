@@ -167,10 +167,10 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             elif hasattr(module, 'scale2'):
                 module.scale2 = high.item()
     
-    def set_train(self, update_model, train_mode):
-        for name, module in update_model.named_modules():
-            if hasattr(module, 'train_mode'):
-                module.train_mode = train_mode
+    # def set_train(self, update_model, train_mode):
+    #     for name, module in update_model.named_modules():
+    #         if hasattr(module, 'train_mode'):
+    #             module.train_mode = train_mode
     
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
         """
@@ -465,8 +465,8 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         # Will be useful when we have an iterable dataset so don't know its length.
         observed_num_examples = 0
 
-        if self.args.adaprompt:
-            self.set_train(self.model, False)
+        # if self.args.adaprompt:
+        #     self.set_train(self.model, False)
     
         # Main evaluation loop
         for step, inputs in enumerate(dataloader):

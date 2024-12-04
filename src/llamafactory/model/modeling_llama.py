@@ -917,7 +917,7 @@ class LlamaModel(LlamaPreTrainedModel):
     def prompt_init(self):
         # adaprompt
         if 'adaprompt' in self.config.to_dict().keys() and self.config.adaprompt:
-            self.train_mode = True
+            # self.train_mode = True
             self.task_id = self.config.task_id
             self.num_prompt = self.config.adaprompt * self.config.n_tasks
             for e in range(self.config.num_hidden_layers // self.config.gap_layers):
@@ -925,16 +925,16 @@ class LlamaModel(LlamaPreTrainedModel):
                 k = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 a = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 w = tensor_prompt(self.num_prompt, self.config.hidden_size)
-                k = self.gram_schmidt(k)
-                a = self.gram_schmidt(a)
-                w = self.gram_schmidt(a)
+                # k = self.gram_schmidt(k)
+                # a = self.gram_schmidt(a)
+                # w = self.gram_schmidt(a)
                 
                 k2 = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 a2 = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 w2 = tensor_prompt(self.num_prompt, self.config.hidden_size)
-                k2 = self.gram_schmidt(k2)
-                a2 = self.gram_schmidt(a2)
-                w2 = self.gram_schmidt(w2)
+                # k2 = self.gram_schmidt(k2)
+                # a2 = self.gram_schmidt(a2)
+                # w2 = self.gram_schmidt(w2)
                 
                 setattr(self, f'vida_k_{e}', k)
                 setattr(self, f'vida_a_{e}', a)
@@ -974,10 +974,10 @@ class LlamaModel(LlamaPreTrainedModel):
         def projection(u, v):
             denominator = (u * u).sum()
 
-            # if denominator < 1e-8:
-            #     return None
-            # else:
-            return (v * u).sum() / denominator * u
+            if denominator < 1e-8:
+                return None
+            else:
+                return (v * u).sum() / denominator * u
 
         # check if the tensor is 3D and flatten the last two dimensions if necessary
         is_3d = len(vv.shape) == 3
@@ -1043,7 +1043,7 @@ class LlamaModel(LlamaPreTrainedModel):
         s = int(self.task_id * pt)
         f = int((self.task_id + 1) * pt)
         
-        if self.train_mode:
+        if self.training:
             if self.task_id > 0:
                 K = torch.cat((K[:s].detach().clone(), K[s:f]), dim=0)
                 A = torch.cat((A[:s].detach().clone(), A[s:f]), dim=0)
@@ -1060,7 +1060,17 @@ class LlamaModel(LlamaPreTrainedModel):
         K = nn.functional.normalize(K, dim=-1)
         a_q = nn.functional.normalize(a_q, dim=-1)
         sim = torch.einsum('blk, kd -> blk', a_q, K) / (input.size(-1) ** 0.5)
-        return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1)
+        ortho_loss = None
+        if self.config.ortho_mu and self.training:
+            ortho_loss = self.ortho_penalty(K) * self.config.ortho_mu
+            ortho_loss += self.ortho_penalty(A) * self.config.ortho_mu
+            ortho_loss += self.ortho_penalty(W) * self.config.ortho_mu
+            # breakpoint()
+            ortho_loss /= 3
+        return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
+    
+    def ortho_penalty(self, t):
+        return ((t @t.T - torch.eye(t.shape[0]).cuda()) ** 2).mean()
     
     
     def get_input_embeddings(self):
@@ -1146,6 +1156,11 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        if self.config.ortho_mu and self.training:
+            ortho_loss = []
+        else:
+            ortho_loss = None
+        
         for i, decoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
@@ -1153,8 +1168,10 @@ class LlamaModel(LlamaPreTrainedModel):
             if 'adaprompt' in self.config.to_dict().keys() and self.config.adaprompt:
                 if i % self.config.gap_layers == 0:
                     e = i // self.config.gap_layers
-                    scale1 = self.get_scale(hidden_states, 'scale1', e)
-                    scale2 = self.get_scale(hidden_states, 'scale2', e)
+                    scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
+                    scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
+                    if self.config.ortho_mu and self.training:
+                        ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
                     self.set_scale(self.layers[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1))
                     # breakpoint()
             
@@ -1202,12 +1219,15 @@ class LlamaModel(LlamaPreTrainedModel):
 
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
+        
+        if self.config.ortho_mu and self.training:
+            ortho_loss = torch.mean(torch.stack(ortho_loss))
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=next_cache,
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
-        )
+        ), ortho_loss
 
     def _update_causal_mask(
         self,
@@ -1360,7 +1380,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model(
+        outputs, ortho_loss = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -1406,6 +1426,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
+        if self.config.ortho_mu and self.training:
+            loss += ortho_loss
+        
         return CausalLMOutputWithPast(
             loss=loss,
             logits=logits,

@@ -26,12 +26,18 @@ restore=${20:-"0"}
 scale=${21:-"0"}
 adaprompt=${22:-"0"}
 reinit=${23:-"0"}
-max_samples=${24:-"1000000"}
+ortho_mu=${24:-"0"}
+gap_layers=${25:-"4"}
+max_samples=${26:-"1000000"}
 extra_args=""
 save_steps=1000
 cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
+
+cp src/llamafactory/model/modeling_t5.py /usr/local/lib/python3.10/dist-packages/transformers/models/t5/modeling_t5.py
+cp src/llamafactory/model/modeling_llama.py /usr/local/lib/python3.10/dist-packages/transformers/models/llama/modeling_llama.py
+cp src/llamafactory/model/trainer.py /usr/local/lib/python3.10/dist-packages/transformers/trainer.py
 
 if [ "$lr_scheduler_type" == "constant" ];then
    warmup_ratio=0.00
@@ -80,7 +86,7 @@ if [ "$model" = "llama3-8b-inst" ];then
 fi
 if [ "$model" = "llama2-7b" ];then
     model_name_or_path=meta-llama/Llama-2-7b-hf
-    cutoff_len=4096
+    cutoff_len=1024
     # extra_args="$extra_args --fp16"
 fi
 if [ "$model" = "qwen2-0.5b" ];then
@@ -127,6 +133,7 @@ fi
 if [ "$model" = "t5-large" ];then
     model_name_or_path=google-t5/t5-large
     template=t5
+    cutoff_len=1024
 fi
 # extra_args="${extra_args} --disable_gradient_checkpointing True"
 save_path=saves/${model}/${finetuning_type}/sft/${order}/${seed}/${lr_scheduler_type}
@@ -264,6 +271,23 @@ if [ "$reinit" != "0" ];then
     eval_path="${eval_path}_reinit${reinit}"
 fi
 
+if [ "$ortho_mu" != "0" ];then
+    extra_args="$extra_args --ortho_mu ${ortho_mu}"
+    save_path="${save_path}_ortho_mu${ortho_mu}"
+    run_name="${run_name}_ortho_mu${ortho_mu}"
+    merge_path="${merge_path}_ortho_mu${ortho_mu}"
+    eval_path="${eval_path}_ortho_mu${ortho_mu}"
+fi
+
+if [ "$gap_layers" != "4" ];then
+    extra_args="$extra_args --gap_layers ${gap_layers}"
+    save_path="${save_path}_gap_layers${gap_layers}"
+    run_name="${run_name}_gap_layers${gap_layers}"
+    merge_path="${merge_path}_gap_layers${gap_layers}"
+    eval_path="${eval_path}_gap_layers${gap_layers}"
+fi
+
+
 if [ "$mode" == "all" ];then
     extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
 fi
@@ -285,9 +309,7 @@ bs0=${bs}
 cutoff_len0=${cutoff_len}
 gradient_accumulation_steps0=${gradient_accumulation_steps}
 flag=1
-cp src/llamafactory/model/modeling_t5.py /usr/local/lib/python3.10/dist-packages/transformers/models/t5/modeling_t5.py
-cp src/llamafactory/model/modeling_llama.py /usr/local/lib/python3.10/dist-packages/transformers/models/llama/modeling_llama.py
-cp src/llamafactory/model/trainer.py /usr/local/lib/python3.10/dist-packages/transformers/trainer.py
+
 for part in "${parts[@]}"; do
     echo ""
     for (( i=1; i<=50; i++ ))
@@ -348,18 +370,27 @@ for part in "${parts[@]}"; do
                 bs=$((bs0 / 2))
                 gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))
             fi
-            cutoff_len=1024
-            # flag=0
-        fi
-        if [ "$part" != "yahoo" ];then
+        else
             bs=${bs0}
-            cutoff_len=${cutoff_len0}
             gradient_accumulation_steps=${gradient_accumulation_steps0}
         fi
+        # if [ "$part" != "yahoo" ] && [ "$part" != "dbpedia" ];then
+        #     bs=${bs0}
+        #     # cutoff_len=${cutoff_len0}
+        #     gradient_accumulation_steps=${gradient_accumulation_steps0}
+        # fi
+        if [ "$adaprompt" != "0" ] && [ "$model" == "t5-large" ] && [ "$part" == "dbpedia" ];then
+            if [ "$bs" -gt 1 ]; then
+                bs=$((bs0 / 2))
+                gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))
+            fi
+                # cutoff_len=1024
+                # flag=0
+        fi
     fi
-    if [ "$scale" != "0" ];then
-        cutoff_len=512
-    fi
+    # if [ "$scale" != "0" ];then
+    #     cutoff_len=512
+    # fi
     # if [ "$flag" == "1" ];then
     #     continue
     # fi

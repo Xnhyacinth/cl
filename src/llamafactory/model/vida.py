@@ -21,6 +21,8 @@ class LlamaVida(LlamaForCausalLM):
             config.task_id = None
         if 'gap_layers' not in config.to_dict().keys():
             config.gap_layers = None
+        if 'ortho_mu' not in config.to_dict().keys():
+            config.ortho_mu = None
         super().__init__(config)
         self.wrap_model()
 
@@ -90,6 +92,8 @@ class T5Vida(T5ForConditionalGeneration):
             config.task_id = None
         if 'gap_layers' not in config.to_dict().keys():
             config.gap_layers = None
+        if 'ortho_mu' not in config.to_dict().keys():
+            config.ortho_mu = None
         super().__init__(config)
         self.wrap_model()
 

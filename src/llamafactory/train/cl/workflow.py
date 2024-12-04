@@ -52,6 +52,7 @@ def run_cl(
     dataset_module = get_dataset(template, model_args, data_args, training_args, stage="cl", **tokenizer_module)
     finetuning_args.n_tasks = len(data_args.orders)
     training_args.adaprompt = finetuning_args.adaprompt
+    finetuning_args.output_dir = training_args.output_dir
     # import pdb; pdb.set_trace()
     # print(dataset_module['train_dataset'][0])
     if data_args.select and training_args.do_train:

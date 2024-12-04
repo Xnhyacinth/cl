@@ -384,7 +384,11 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
     )
     reinit: bool = field(
         default=False,
-        metadata={"help": "Whether use vida."},
+        metadata={"help": "Whether reinit the prompt."},
+    )
+    ortho_mu: float = field(
+        default=None,
+        metadata={"help": "ortho loss weight."},
     )
 
     def __post_init__(self):
