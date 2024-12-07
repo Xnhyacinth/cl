@@ -52,6 +52,15 @@ fi
 if [ "$order" == "order_3" ];then
    orders=yahoo,amazon,agnews,dbpedia
 fi
+if [ "$order" == "order_4" ];then
+   orders=mnli,cb,wic,copa,qqp,boolqa,rte,imdb,yelp,amazon,sst-2,dbpedia,agnews,multirc,yahoo
+fi
+if [ "$order" == "order_5" ];then
+   orders=multirc,boolqa,wic,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yelp,amazon,yahoo
+fi
+if [ "$order" == "order_6" ];then
+   orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
+fi
 IFS=',' read -r -a parts <<< "$orders"
 orders=${orders//,/ }
 echo ${orders}
@@ -65,7 +74,7 @@ fi
 if [ "$bs" = "1" ];then
     gradient_accumulation_steps=8
 fi
-if [ "$num_gpus" = "1" ];then
+if [ "$num_gpus" == "1" ] && [ "$bs" != "16" ];then
     gradient_accumulation_steps=$((2 * gradient_accumulation_steps))
 fi
 
@@ -87,6 +96,9 @@ fi
 if [ "$model" = "llama2-7b" ];then
     model_name_or_path=meta-llama/Llama-2-7b-hf
     cutoff_len=1024
+    if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
+        cutoff_len=800
+    fi
     # extra_args="$extra_args --fp16"
 fi
 if [ "$model" = "qwen2-0.5b" ];then
@@ -134,6 +146,9 @@ if [ "$model" = "t5-large" ];then
     model_name_or_path=google-t5/t5-large
     template=t5
     cutoff_len=1024
+    if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
+        cutoff_len=800
+    fi
 fi
 # extra_args="${extra_args} --disable_gradient_checkpointing True"
 save_path=saves/${model}/${finetuning_type}/sft/${order}/${seed}/${lr_scheduler_type}
@@ -334,6 +349,7 @@ for part in "${parts[@]}"; do
             extra_args="${extra_args0}"
         fi
     fi
+    mvpath="${save_prefix}/${idx}-${pre_part}"
     pre_part=${part}
     dataset=cl_${part}
     if [ "$filter" != "0" ];then
@@ -379,13 +395,15 @@ for part in "${parts[@]}"; do
         #     # cutoff_len=${cutoff_len0}
         #     gradient_accumulation_steps=${gradient_accumulation_steps0}
         # fi
-        if [ "$adaprompt" != "0" ] && [ "$model" == "t5-large" ] && [ "$part" == "dbpedia" ];then
-            if [ "$bs" -gt 1 ]; then
-                bs=$((bs0 / 2))
-                gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))
-            fi
+        if [ "$adaprompt" != "0" ] && [ "$model" == "t5-large" ];then
+            if [ "$part" == "dbpedia" ] || [ "$part" == "yelp" ] || [ "$part" == "multirc" ] || [ "$part" == "boolqa" ];then
+                if [ "$bs" -gt 1 ]; then
+                    bs=$((bs0 / 2))
+                    gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))
+                fi
                 # cutoff_len=1024
                 # flag=0
+            fi
         fi
     fi
     # if [ "$scale" != "0" ];then
@@ -405,7 +423,7 @@ for part in "${parts[@]}"; do
     echo "dataset: ${dataset}"
     echo "eval_dataset: ${eval_dataset}"
 
-    CUDA_VISIBLE_DEVICES=${gpus} llamafactory-cli train \
+    succ=`CUDA_VISIBLE_DEVICES=${gpus} llamafactory-cli train \
         --stage cl \
         --model_name_or_path ${model_name_or_path} \
         --dataset_dir ./data \
@@ -436,6 +454,22 @@ for part in "${parts[@]}"; do
         --seed ${seed} \
         --bf16 \
         --orders ${orders} \
-        ${extra_args} #--fp16 \
-    sleep 5
+        ${extra_args} && echo "true" || echo "false"`
+    sleep 20
+    bash config/rm.sh ${save_path} checkpoint
+    if [[ $succ != *true* ]]; then
+        echo "${part} error!"
+        exit 1
+    fi
+    if [ "$idx" -gt 1 ]; then
+        echo "mv  ${mvpath}"
+        bash config/rm.sh ${mvpath} safetensors
+        sleep 20
+        # cp -rf ${mvpath} /modelopsnas/modelops/468440/cl/${mvpath}
+    fi
 done
+
+echo "mv  ${save_path}"
+bash config/rm.sh ${save_path} safetensors
+sleep 10
+# cp -rf ${save_path} /modelopsnas/modelops/468440/cl/${save_path}

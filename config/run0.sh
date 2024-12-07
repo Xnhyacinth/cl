@@ -26,7 +26,7 @@ reinit=${18:-"0"}
 ortho_mu=${19:-"0"}
 gap_layers=${20:-"4"}
 # bash config/train.sh 1 9 tinyllama order_1 lora 1 1e-4 8 fewshot -1 1e-10 8
-for i in {3..1}; do
+for i in {1..1}; do
     for seed in "${seeds[@]}"; do
         output_prefix=logs/${model}/${tuning_method}/${seed}/order_${i}/${lr_type}_${lr}_${bs}
         if [ "$filter" != "0" ];then
@@ -68,7 +68,7 @@ for i in {3..1}; do
         mkdir -p ${output_prefix}
         LOGFILE="${output_prefix}/train_and_infer.log"
         # bash config/train1.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers}
-        bash config/train3.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} > "$LOGFILE" 2>&1
+        bash config/train1.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} > "$LOGFILE" 2>&1
     done
 done
 # 

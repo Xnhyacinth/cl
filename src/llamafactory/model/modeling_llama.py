@@ -1156,7 +1156,7 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             ortho_loss = []
         else:
             ortho_loss = None
@@ -1220,7 +1220,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             ortho_loss = torch.mean(torch.stack(ortho_loss))
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
@@ -1426,7 +1426,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             loss += ortho_loss
         
         return CausalLMOutputWithPast(

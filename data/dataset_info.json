@@ -1,4 +1,92 @@
 {
+  "cl_mnli": {
+    "file_name": "CL/NLI/MNLI/train.json",
+    "formatting": "cl"
+  },
+  "cl_cb": {
+    "file_name": "CL/NLI/CB/train.json",
+    "formatting": "cl"
+  },
+  "cl_wic": {
+    "file_name": "CL/WiC/WiC/train.json",
+    "formatting": "cl"
+  },
+  "cl_copa": {
+    "file_name": "CL/COPA/COPA/train.json",
+    "formatting": "cl"
+  },
+  "cl_qqp": {
+    "file_name": "CL/QQP/QQP/train.json",
+    "formatting": "cl"
+  },
+  "cl_boolqa": {
+    "file_name": "CL/BoolQA/BoolQA/train.json",
+    "formatting": "cl"
+  },
+  "cl_rte": {
+    "file_name": "CL/NLI/RTE/train.json",
+    "formatting": "cl"
+  },
+  "cl_imdb": {
+    "file_name": "CL/SC/IMDB/train.json",
+    "formatting": "cl"
+  },
+  "cl_yelp": {
+    "file_name": "CL/SC/yelp/train.json",
+    "formatting": "cl"
+  },
+  "cl_sst-2": {
+    "file_name": "CL/SC/SST-2/train.json",
+    "formatting": "cl"
+  },
+  "cl_multirc": {
+    "file_name": "CL/MultiRC/MultiRC/train.json",
+    "formatting": "cl"
+  },
+  "cl_mnli_eval": {
+    "file_name": "CL/NLI/MNLI/test.json",
+    "formatting": "cl"
+  },
+  "cl_cb_eval": {
+    "file_name": "CL/NLI/CB/test.json",
+    "formatting": "cl"
+  },
+  "cl_wic_eval": {
+    "file_name": "CL/WiC/WiC/test.json",
+    "formatting": "cl"
+  },
+  "cl_copa_eval": {
+    "file_name": "CL/COPA/COPA/test.json",
+    "formatting": "cl"
+  },
+  "cl_qqp_eval": {
+    "file_name": "CL/QQP/QQP/test.json",
+    "formatting": "cl"
+  },
+  "cl_boolqa_eval": {
+    "file_name": "CL/BoolQA/BoolQA/test.json",
+    "formatting": "cl"
+  },
+  "cl_rte_eval": {
+    "file_name": "CL/NLI/RTE/test.json",
+    "formatting": "cl"
+  },
+  "cl_imdb_eval": {
+    "file_name": "CL/SC/IMDB/test.json",
+    "formatting": "cl"
+  },
+  "cl_yelp_eval": {
+    "file_name": "CL/SC/yelp/test.json",
+    "formatting": "cl"
+  },
+  "cl_sst-2_eval": {
+    "file_name": "CL/SC/SST-2/test.json",
+    "formatting": "cl"
+  },
+  "cl_multirc_eval": {
+    "file_name": "CL/MultiRC/MultiRC/test.json",
+    "formatting": "cl"
+  },
   "cl_dbpedia": {
     "file_name": "CL/TC/dbpedia/train.json",
     "formatting": "cl"

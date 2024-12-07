@@ -1256,7 +1256,7 @@ class T5Stack(T5PreTrainedModel):
         encoder_decoder_position_bias = None
 
         hidden_states = self.dropout(inputs_embeds)
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             ortho_loss = []
         else:
             ortho_loss = None
@@ -1290,7 +1290,7 @@ class T5Stack(T5PreTrainedModel):
                     e = i // self.config.gap_layers
                     scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
                     scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
-                    if self.config.ortho_mu and self.training:
+                    if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
                         ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
                     self.set_scale(self.block[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1))
                     # breakpoint()
@@ -1372,7 +1372,7 @@ class T5Stack(T5PreTrainedModel):
                 ]
                 if v is not None
             )
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             ortho_loss = torch.mean(torch.stack(ortho_loss))
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
@@ -1988,7 +1988,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel, GenerationMixin):
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
             return ((loss,) + output) if loss is not None else output
 
-        if self.config.ortho_mu and self.training:
+        if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             loss += (ortho_loss_en + ortho_loss_de) / 2
         
         return Seq2SeqLMOutput(

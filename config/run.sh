@@ -26,7 +26,7 @@ reinit=${18:-"0"}
 ortho_mu=${19:-"0"}
 gap_layers=${20:-"4"}
 # bash config/train.sh 1 9 tinyllama order_1 lora 1 1e-4 8 fewshot -1 1e-10 8
-for i in {3..1}; do
+for i in {4..6}; do
     for seed in "${seeds[@]}"; do
         output_prefix=logs/${model}/${tuning_method}/${seed}/order_${i}/${lr_type}_${lr}_${bs}
         if [ "$filter" != "0" ];then

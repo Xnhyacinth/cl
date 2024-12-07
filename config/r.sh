@@ -7,7 +7,7 @@
 
 # bash config/run2.sh 1 1 llama2-7b vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4
 bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1 1000
-# bash config/run3.sh 1 6 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4
+# bash config/run1.sh 1 7 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 2
 
 # nohup bash config/run.sh 2 1,2 t5-large vida 2 constant 1e-4 0 all 0 8 -1 4 8 > logs/dd.log 2>&1 &
 # nohup bash config/run.sh 2 3,4 t5-large vida 2 constant 1e-4 0 all 0 8 -1 2 16 > logs/ee.log 2>&1 &
@@ -54,14 +54,14 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 
 # nohup bash config/run.sh 2 8,9 tinyllama lora > logs/b.log 2>&1 &
 # sudo apt install alipay-linkc-zeta-0.14.0 -b current
-# ps -ef |grep _ortho_mu|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep _ortho_mu1e7|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 50_adaprompt4|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep 0,4|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep e2.sh|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep 0,6|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep lora|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep restore0.5|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep 0.5|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep adaprompt|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep lora|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep -E 'run|train'|grep -v grep |cut -c 9-14|xargs kill -9
 # datasets="2_3_lower 2_3_upper 4_5_lower 4_5_upper"
 # datasets="2_3_lower 2_3_upper"
 # for item in $datasets; do
