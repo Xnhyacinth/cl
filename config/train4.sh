@@ -61,9 +61,11 @@ fi
 if [ "$order" == "order_6" ];then
    orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
 fi
+last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
 orders=${orders//,/ }
 echo ${orders}
+
 
 if [ "$bs" = "4" ];then
     gradient_accumulation_steps=2
@@ -396,7 +398,7 @@ for part in "${parts[@]}"; do
         #     gradient_accumulation_steps=${gradient_accumulation_steps0}
         # fi
         if [ "$adaprompt" != "0" ] && [ "$model" == "t5-large" ];then
-            if [ "$part" == "dbpedia" ] || [ "$part" == "yelp" ] || [ "$part" == "multirc" ] || [ "$part" == "boolqa" ];then
+            if [ "$part" == "dbpedia" ] || [ "$part" == "yelp" ] || [ "$part" == "multirc" ] || [ "$part" == "boolqa" ] || [ "$part" == "imdb" ];then
                 if [ "$bs" -gt 1 ]; then
                     bs=$((bs0 / 2))
                     gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))
@@ -412,6 +414,15 @@ for part in "${parts[@]}"; do
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
+    if [ "$part" == "imdb" ];then
+        flag=0
+    fi
+    # if [ "$part" == "agnews" ] && [ "$r" == "16" ];then
+    # flag=0
+    # fi
+    if [ "$flag" == "1" ];then
+        continue
+    fi
     
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"

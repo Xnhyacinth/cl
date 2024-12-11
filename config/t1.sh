@@ -1,6 +1,6 @@
 
 
-ranks="4 2 1 0 3 5"
+ranks="4 2 0 3 5"
 for item in $ranks; do
     echo "Item: $item"
     if [ "$item" = "2" ];then
@@ -24,7 +24,7 @@ for item in $ranks; do
         item=1
         r2=8
     fi
-    bash config/run.sh 2 8,9 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4 1 10 4
+    bash config/run.sh 2 8,9 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 100 4
 done
 
 # nohup bash config/t1.sh > logs/t5_t1.log 2>&1 &

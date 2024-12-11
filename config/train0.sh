@@ -409,9 +409,12 @@ for part in "${parts[@]}"; do
     # if [ "$scale" != "0" ];then
     #     cutoff_len=512
     # fi
-    # if [ "$flag" == "1" ];then
-    #     continue
-    # fi
+    if [ "$part" == "dbpedia" ];then
+        flag=0
+    fi
+    if [ "$flag" == "1" ] && [ "$order" == "order_4" ];then
+        continue
+    fi
     
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"

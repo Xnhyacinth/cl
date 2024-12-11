@@ -61,9 +61,11 @@ fi
 if [ "$order" == "order_6" ];then
    orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
 fi
+last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
 orders=${orders//,/ }
 echo ${orders}
+
 
 if [ "$bs" = "4" ];then
     gradient_accumulation_steps=2
@@ -304,7 +306,8 @@ fi
 
 
 if [ "$mode" == "all" ];then
-    extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
+    # extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
+    extra_args="${extra_args} --do_train"
 fi
 
 if [ "$mode" == "eval" ];then
@@ -406,9 +409,9 @@ for part in "${parts[@]}"; do
             fi
         fi
     fi
-    # if [ "$scale" != "0" ];then
-    #     cutoff_len=512
-    # fi
+    if [ "$part" == "$last_element" ];then
+        extra_args="${extra_args}  --do_predict --predict_with_generate"
+    fi
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
