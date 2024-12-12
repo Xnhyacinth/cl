@@ -69,7 +69,7 @@ for item in $ranks; do
         item=1
         r2=8
     fi
-    bash config/run.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4 1
+    bash config/run4.sh 2 1,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4 1
 done
 # ranks="2"
 # for item in $ranks; do

@@ -23,6 +23,8 @@ class LlamaVida(LlamaForCausalLM):
             config.gap_layers = None
         if 'ortho_mu' not in config.to_dict().keys():
             config.ortho_mu = None
+        if 'scale_bakebone' not in config.to_dict().keys():
+            config.scale_bakebone = None
         super().__init__(config)
         self.wrap_model()
 
@@ -94,6 +96,8 @@ class T5Vida(T5ForConditionalGeneration):
             config.gap_layers = None
         if 'ortho_mu' not in config.to_dict().keys():
             config.ortho_mu = None
+        if 'scale_bakebone' not in config.to_dict().keys():
+            config.scale_bakebone = None
         super().__init__(config)
         self.wrap_model()
 

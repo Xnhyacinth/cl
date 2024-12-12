@@ -206,7 +206,8 @@ def load_model(
             "n_tasks": finetuning_args.n_tasks,
             "task_id": finetuning_args.task_id,
             "gap_layers": finetuning_args.gap_layers,
-            "ortho_mu": finetuning_args.ortho_mu
+            "ortho_mu": finetuning_args.ortho_mu,
+            "scale_bakebone": finetuning_args.scale_bakebone
         }   
         model.config.update(vida_config)
         state_dict = model.state_dict()

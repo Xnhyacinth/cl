@@ -25,6 +25,7 @@ class ViDAInjectedLinear(nn.Module):
         self.vida_up2 = nn.Linear(r2, out_features, bias=False)
         self.scale1 = 1.0
         self.scale2 = 1.0
+        self.scale3 = 1.0
         
         nn.init.normal_(self.vida_down.weight, std=1 / r**2)
         nn.init.zeros_(self.vida_up.weight)
@@ -39,7 +40,7 @@ class ViDAInjectedLinear(nn.Module):
         #     x = self.linear_vida(input) + self.vida_up(self.vida_down(input)) * self.scale1 + self.vida_up2(self.vida_down2(input)) * self.scale2
         # except:
         #     breakpoint()
-        return self.linear_vida(input) + self.vida_up(self.vida_down(input)) * self.scale1 + self.vida_up2(self.vida_down2(input)) * self.scale2
+        return self.linear_vida(input) * self.scale3 + self.vida_up(self.vida_down(input)) * self.scale1 + self.vida_up2(self.vida_down2(input)) * self.scale2
 
 def uninject_trainable_vida(model: nn.Module, target_replace_module: List[str] = ["CrossAttention", "Attention"]):
     """

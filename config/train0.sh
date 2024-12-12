@@ -35,9 +35,7 @@ cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
 
-cp src/llamafactory/model/modeling_t5.py /usr/local/lib/python3.10/dist-packages/transformers/models/t5/modeling_t5.py
-cp src/llamafactory/model/modeling_llama.py /usr/local/lib/python3.10/dist-packages/transformers/models/llama/modeling_llama.py
-cp src/llamafactory/model/trainer.py /usr/local/lib/python3.10/dist-packages/transformers/trainer.py
+# bash patch/install.sh
 
 if [ "$lr_scheduler_type" == "constant" ];then
    warmup_ratio=0.00

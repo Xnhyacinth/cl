@@ -390,6 +390,10 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
         default=None,
         metadata={"help": "ortho loss weight."},
     )
+    scale_bakebone: float = field(
+        default=None,
+        metadata={"help": "ortho loss weight."},
+    )
 
     def __post_init__(self):
         def split_arg(arg):
