@@ -397,7 +397,7 @@ for part in "${parts[@]}"; do
         #     gradient_accumulation_steps=${gradient_accumulation_steps0}
         # fi
         if [ "$adaprompt" != "0" ] && [ "$model" == "t5-large" ];then
-            if [ "$part" == "dbpedia" ] || [ "$part" == "yelp" ] || [ "$part" == "multirc" ] || [ "$part" == "boolqa" ];then
+            if [ "$part" == "dbpedia" ] || [ "$part" == "yelp" ] || [ "$part" == "multirc" ] || [ "$part" == "boolqa" ] || [ "$part" == "imdb" ];then
                 if [ "$bs" -gt 1 ]; then
                     bs=$((bs0 / 2))
                     gradient_accumulation_steps=$((gradient_accumulation_steps0 * 2))

@@ -954,14 +954,21 @@ class T5Stack(T5PreTrainedModel):
             # setattr(self, f'e_a_{e}',a)
                 k = tensor_prompt(self.num_prompt, self.config.d_model)
                 a = tensor_prompt(self.num_prompt, self.config.d_model)
-                w = tensor_prompt(self.num_prompt, self.config.d_model)
+                if self.config.project:
+                    logger.info(f'project {self.config.project}!')
+                    w = tensor_prompt(self.num_prompt, self.config.project)
+                else:
+                    w = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 # k = self.gram_schmidt(k)
                 # a = self.gram_schmidt(a)
                 # w = self.gram_schmidt(a)
                 
                 k2 = tensor_prompt(self.num_prompt, self.config.d_model)
                 a2 = tensor_prompt(self.num_prompt, self.config.d_model)
-                w2 = tensor_prompt(self.num_prompt, self.config.d_model)
+                if self.config.project:
+                    w2 = tensor_prompt(self.num_prompt, self.config.project)
+                else:
+                    w2 = tensor_prompt(self.num_prompt, self.config.hidden_size)
                 # k2 = self.gram_schmidt(k2)
                 # a2 = self.gram_schmidt(a2)
                 # w2 = self.gram_schmidt(w2)
@@ -975,7 +982,10 @@ class T5Stack(T5PreTrainedModel):
                 if self.config.scale_bakebone:
                     k3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
                     a3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
-                    w3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
+                    if self.config.project:
+                        w3 = tensor_prompt(self.num_prompt, self.config.project)
+                    else:
+                        w3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
                     
                     setattr(self, f'vida_k3_{e}', k3)
                     setattr(self, f'vida_a3_{e}', a3)
@@ -1120,8 +1130,15 @@ class T5Stack(T5PreTrainedModel):
             ortho_loss += self.ortho_penalty(W) * self.config.ortho_mu
             # breakpoint()
             ortho_loss /= 3
-        return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
+        # return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
+        if self.config.project:
+            return torch.sum(torch.einsum('blk, kd -> bld', sim, W), -1).unsqueeze(-1), ortho_loss
+        elif self.config.nomlp:
+            return torch.einsum('blk, kd -> bld', sim, W), ortho_loss
+        else:
+            return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
     
+
     def ortho_penalty(self, t):
         return ((t @t.T - torch.eye(t.shape[0]).cuda()) ** 2).mean()
     
@@ -1317,14 +1334,23 @@ class T5Stack(T5PreTrainedModel):
                     scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
                     scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
                     scale3 = 1.0
-                    if self.config.bakebone:
+                    if self.config.scale_bakebone:
                         scale3, ortho_loss3 = self.get_scale(hidden_states, 'scale3', e)
+                        # scales = torch.stack([scale1, scale2, scale3])
+                        # scales_sft = nn.functional.softmax(scales, dim=-1).type_as(
+                        #     scales
+                        # )
+                        # scale1, scale2, scale3 = scales_sft[0], scales_sft[2], scales_sft[2]
                         scale3 = torch.sigmoid(scale3)
-                    if self.config.ortho_mu and self.training and self.config.bakebone:
+                        scale2 = torch.sigmoid(scale2)
+                        scale1 = torch.sigmoid(scale1)
+                    if self.config.ortho_mu and self.training and self.config.scale_bakebone:
                         ortho_loss.append((ortho_loss1 + ortho_loss2 + ortho_loss3) / 3)
                     elif self.config.ortho_mu and self.training:
                         ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
-                    self.set_scale(self.layers[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1), scale3)
+                        scale2 = torch.sigmoid(scale2)
+                        scale1 = torch.sigmoid(scale1)
+                    self.set_scale(self.block[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], scale2, scale1, scale3)
                     # breakpoint()
             
             if self.gradient_checkpointing and self.training:

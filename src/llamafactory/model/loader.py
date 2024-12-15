@@ -207,8 +207,11 @@ def load_model(
             "task_id": finetuning_args.task_id,
             "gap_layers": finetuning_args.gap_layers,
             "ortho_mu": finetuning_args.ortho_mu,
-            "scale_bakebone": finetuning_args.scale_bakebone
-        }   
+            "scale_bakebone": finetuning_args.scale_bakebone,
+            "nomlp": finetuning_args.nomlp,
+            "project": finetuning_args.project
+        }
+        print(model)
         model.config.update(vida_config)
         state_dict = model.state_dict()
         model = load_class(model.config)
@@ -245,7 +248,7 @@ def load_model(
         )
     else:
         param_stats = "all params: {:,}".format(all_param)
-
+    # breakpoint()
     logger.info(param_stats)
 
     if model_args.print_param_status:

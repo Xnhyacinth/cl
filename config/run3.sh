@@ -68,7 +68,7 @@ for i in {4..6}; do
         mkdir -p ${output_prefix}
         LOGFILE="${output_prefix}/train_and_infer.log"
         # bash config/train1.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers}
-        bash config/train1.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} > "$LOGFILE" 2>&1
+        bash config/train5.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} > "$LOGFILE" 2>&1
     done
 done
 # 

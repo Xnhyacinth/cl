@@ -1,7 +1,7 @@
 
 
 ranks="8 16 4 2 32 1"
-ranks="2 32 1"
+ranks="32 1"
 for item in $ranks; do
     echo "Item: $item"
     # if [ "$item" = "2" ];then

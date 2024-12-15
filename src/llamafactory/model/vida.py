@@ -25,11 +25,20 @@ class LlamaVida(LlamaForCausalLM):
             config.ortho_mu = None
         if 'scale_bakebone' not in config.to_dict().keys():
             config.scale_bakebone = None
+        if 'nomlp' not in config.to_dict().keys():
+            config.nomlp = None
+        if 'project' not in config.to_dict().keys():
+            config.project = None
         super().__init__(config)
         self.wrap_model()
 
     def wrap_model(self):
-        inject_trainable_vida(self, target_replace_module=[
+        if self.config.nomlp:
+            logging.info('nomlp')
+            inject_trainable_vida(self, target_replace_module=[
+                              "LlamaSdpaAttention", "LlamaAttention", "LlamaFlashAttention2"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        else:
+            inject_trainable_vida(self, target_replace_module=[
                               "LlamaMLP", "LlamaSdpaAttention", "LlamaAttention", "LlamaFlashAttention2"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
         if self.config.adaprompt:
             self.model.prompt_init()
@@ -45,6 +54,10 @@ class LlamaVida(LlamaForCausalLM):
                 delattr(self.model, f"vida_w2_{e}")
                 delattr(self.model, f"vida_a2_{e}")
                 delattr(self.model, f"vida_k2_{e}")
+                if self.config.scale_bakebone:
+                    delattr(self.model, f"vida_w3_{e}")
+                    delattr(self.model, f"vida_a3_{e}")
+                    delattr(self.model, f"vida_k3_{e}")
 
     def load_model(self, state_dict):
         self.unwrap_model()
@@ -98,14 +111,18 @@ class T5Vida(T5ForConditionalGeneration):
             config.ortho_mu = None
         if 'scale_bakebone' not in config.to_dict().keys():
             config.scale_bakebone = None
+        if 'nomlp' not in config.to_dict().keys():
+            config.nomlp = None
+        if 'project' not in config.to_dict().keys():
+            config.project = None
         super().__init__(config)
         self.wrap_model()
 
     def wrap_model(self):
-        # if self.config.adaprompt:
-        #     inject_trainable_vida(self, target_replace_module=["T5Attention"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
-        # else:
-        inject_trainable_vida(self, target_replace_module=[
+        if self.config.nomlp:
+            inject_trainable_vida(self, target_replace_module=["T5Attention"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        else:
+            inject_trainable_vida(self, target_replace_module=[
                             "T5Attention", "T5DenseActDense"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
         
         if self.config.adaprompt:
@@ -132,6 +149,14 @@ class T5Vida(T5ForConditionalGeneration):
                 delattr(self.encoder, f"vida_w2_{e}")
                 delattr(self.encoder, f"vida_a2_{e}")
                 delattr(self.encoder, f"vida_k2_{e}")
+                
+                if self.config.scale_bakebone:
+                    delattr(self.encoder, f"vida_w3_{e}")
+                    delattr(self.encoder, f"vida_a3_{e}")
+                    delattr(self.encoder, f"vida_k3_{e}")
+                    delattr(self.decoder, f"vida_w3_{e}")
+                    delattr(self.decoder, f"vida_a3_{e}")
+                    delattr(self.decoder, f"vida_k3_{e}")
 
     def load_model(self, state_dict):
         self.unwrap_model()

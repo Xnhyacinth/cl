@@ -55,12 +55,12 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 # nohup bash config/run.sh 2 8,9 tinyllama lora > logs/b.log 2>&1 &
 # sudo apt install alipay-linkc-zeta-0.14.0 -b current
 # ps -ef |grep _ortho_mu1e7|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep 50_adaprompt4|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep 0,6|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep train4.sh|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep "1 1 llama2"|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep lora|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep restore0.5|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep lora|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep llama3.1-8b|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep vida|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep -E 'run|train'|grep -v grep |cut -c 9-14|xargs kill -9
 # datasets="2_3_lower 2_3_upper 4_5_lower 4_5_upper"
 # datasets="2_3_lower 2_3_upper"

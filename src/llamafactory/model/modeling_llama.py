@@ -943,20 +943,40 @@ class LlamaModel(LlamaPreTrainedModel):
                 setattr(self, f'vida_a2_{e}', a2)
                 setattr(self, f'vida_w2_{e}', w2)
                 
+                if self.config.scale_bakebone:
+                    k3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
+                    a3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
+                    w3 = tensor_prompt(self.num_prompt, self.config.hidden_size)
+                    
+                    setattr(self, f'vida_k3_{e}', k3)
+                    setattr(self, f'vida_a3_{e}', a3)
+                    setattr(self, f'vida_w3_{e}', w3)
+                    
+                    logger.info(f'adaprompt scale bakebone!')
+                    
+                
             logger.info(f'adaprompt initialized, {self.config.adaprompt} prompts per {self.config.gap_layers} layers for {self.config.n_tasks} tasks. Task_id: {self.task_id}.')
 
     def post_prompt_init(self):
         logger.info(f'prompt reinit: {self.task_id}')
+        if self.config.scale_bakebone:
+            names = ['scale1', 'scale2', 'scale3']
+        else:
+            names = ['scale1', 'scale2']
         for e in range(self.config.num_hidden_layers // self.config.gap_layers):
-            for name in ['scale1', 'scale2']:
+            for name in names:
                 if name == 'scale1':
                     k_name = f'vida_k_{e}'
                     a_name = f'vida_a_{e}'
                     w_name = f'vida_w_{e}'
-                else:
+                elif name == 'scale2':
                     k_name = f'vida_k2_{e}'
                     a_name = f'vida_a2_{e}'
                     w_name = f'vida_w2_{e}'
+                else:
+                    k_name = f'vida_k3_{e}'
+                    a_name = f'vida_a3_{e}'
+                    w_name = f'vida_w3_{e}'
                 K = getattr(self, k_name)
                 A = getattr(self, a_name)
                 W = getattr(self, w_name)
@@ -1032,10 +1052,15 @@ class LlamaModel(LlamaPreTrainedModel):
             k_name = f'vida_k_{e}'
             a_name = f'vida_a_{e}'
             w_name = f'vida_w_{e}'
-        else:
+        elif name == 'scale2':
             k_name = f'vida_k2_{e}'
             a_name = f'vida_a2_{e}'
             w_name = f'vida_w2_{e}'
+        else:
+            k_name = f'vida_k3_{e}'
+            a_name = f'vida_a3_{e}'
+            w_name = f'vida_w3_{e}'
+
         K = getattr(self, k_name)
         A = getattr(self, a_name)
         W = getattr(self, w_name)
@@ -1067,7 +1092,11 @@ class LlamaModel(LlamaPreTrainedModel):
             ortho_loss += self.ortho_penalty(W) * self.config.ortho_mu
             # breakpoint()
             ortho_loss /= 3
-        return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
+        # return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
+        if self.config.nomlp:
+            return torch.einsum('blk, kd -> bld', sim, W), ortho_loss
+        else:
+            return torch.sum(torch.einsum('blk, kd -> bld', sim, W), (1, 2)).unsqueeze(-1).unsqueeze(-1), ortho_loss
     
     def ortho_penalty(self, t):
         return ((t @t.T - torch.eye(t.shape[0]).cuda()) ** 2).mean()
@@ -1079,12 +1108,14 @@ class LlamaModel(LlamaPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def set_scale(self, update_model, high, low):
+    def set_scale(self, update_model, high, low, bakebone=1.0):
         for name, module in update_model.named_modules():
             if hasattr(module, 'scale1'):
                 module.scale1 = low
             if hasattr(module, 'scale2'):
                 module.scale2 = high
+            if hasattr(module, 'scale3'):
+                module.scale3 = bakebone
 
     @add_start_docstrings_to_model_forward(LLAMA_INPUTS_DOCSTRING)
     def forward(
@@ -1170,9 +1201,25 @@ class LlamaModel(LlamaPreTrainedModel):
                     e = i // self.config.gap_layers
                     scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
                     scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
-                    if self.config.ortho_mu and self.training:
+                    scale3 = 1.0
+                    if self.config.scale_bakebone:
+                        scale3, ortho_loss3 = self.get_scale(hidden_states, 'scale3', e)
+                        # scales = torch.stack([scale1, scale2, scale3])
+                        # scales_sft = nn.functional.softmax(scales, dim=-1).type_as(
+                        #     scales
+                        # )
+                        # breakpoint()
+                        # scale1, scale2, scale3 = scales_sft[0], scales_sft[2], scales_sft[2]
+                        scale3 = torch.sigmoid(scale3)
+                        scale2 = torch.sigmoid(scale2)
+                        scale1 = torch.sigmoid(scale1)
+                    if self.config.ortho_mu and self.training and self.config.scale_bakebone:
+                        ortho_loss.append((ortho_loss1 + ortho_loss2 + ortho_loss3) / 3)
+                    elif self.config.ortho_mu and self.training:
                         ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
-                    self.set_scale(self.layers[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], torch.sigmoid(scale2), torch.sigmoid(scale1))
+                        scale2 = torch.sigmoid(scale2)
+                        scale1 = torch.sigmoid(scale1)
+                    self.set_scale(self.layers[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], scale2, scale1, scale3)
                     # breakpoint()
             
             if self.gradient_checkpointing and self.training:

@@ -1,39 +1,4 @@
-
-###
- # Copyright (c) 2024 by Huanxuan Liao, huanxuanliao@gmail.com, All Rights Reserved. 
- # @Author: Xnhyacinth, Xnhyacinth@qq.com
- # @Date: 2024-11-19 11:47:55
-### 
-
-datasets="2_3_lower 2_3_upper"
-datasets="llama2_2_3_lower llama2_2_3_upper"
-datasets="3500_lower 3500_upper"
-datasets="2500_lower 2500_upper 3500_lower 3500_upper"
-# for item in $datasets; do
-#     echo "Item: $item"
-#     bash config/run.sh 2 8,9 t5-large lora 4 constant 1e-4 ${item} all 0 16
-# done
-
-
-datasets="2_3_lower 2_3_upper"
-datasets="llama2_2_3_lower llama2_2_3_upper"
-datasets="llama2_3500_lower llama2_3500_upper"
-# for item in $datasets; do
-#     echo "Item: $item"
-#     bash config/run.sh 1 1 llama2-7b lora 16 constant 1e-4 ${item} all 0 16
-# done
-# ranks="4 2"
-# for item in $ranks; do
-#     echo "Item: $item"
-#     if [ "$item" = "2" ];then
-#         r2=32
-#     fi
-#     if [ "$item" = "4" ];then
-#         r2=16
-#     fi
-#     bash config/run1.sh 2 6,7 t5-large vida 2 constant 3e-5 0 all 0 8 -1 $item $r2
-# done
-ranks="2"
+ranks="4 2 0 3 5"
 for item in $ranks; do
     echo "Item: $item"
     if [ "$item" = "2" ];then
@@ -42,32 +7,21 @@ for item in $ranks; do
     if [ "$item" = "4" ];then
         r2=8
     fi
-    bash config/run4.sh 2 2,3 t5-large vida 2 constant 3e-5 0 all 0 8 -1 $item $r2
-done
-
-ranks="2"
-for item in $ranks; do
-    echo "Item: $item"
-    if [ "$item" = "2" ];then
-        r2=16
-    fi
-    if [ "$item" = "4" ];then
-        r2=8
-    fi
-    bash config/run1.sh 2 2,3 t5-large vida 2 constant 3e-4 0 all 0 8 -1 $item $r2
-done
-
-ranks="2"
-for item in $ranks; do
-    echo "Item: $item"
-    if [ "$item" = "2" ];then
+    if [ "$item" = "1" ];then
         r2=32
     fi
-    if [ "$item" = "4" ];then
+    if [ "$item" = "0" ];then
+        item=2
+        r2=4
+    fi
+    if [ "$item" = "3" ];then
+        item=2
+        r2=8
+    fi
+    if [ "$item" = "5" ];then
+        item=4
         r2=16
     fi
-    bash config/run3.sh 2 2,3 t5-large vida 2 constant 5e-5 0 all 0 8 -1 $item $r2
+    # bash config/run.sh 1 0 llama2-7b lora 16 constant 1e-4 0 all 0 8 -1
+    bash config/run5.sh 2 0,1 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 1 2 0 0 16
 done
-# nohup bash config/t.sh > logs/llama2_2_3.log 2>&1 &
-# nohup bash config/t2.sh > logs/b.log 2>&1 &
-# nohup bash config/t2.sh > logs/t5_4_5.log 2>&1 &

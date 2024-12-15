@@ -428,7 +428,10 @@ for part in "${parts[@]}"; do
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
-    if [ "$part" == "imdb" ];then
+    if [ "$part" == "yahoo" ] && [ "$order" == "order_4" ];then
+        flag=0
+    fi
+    if [ "$part" == "imdb" ] && [ "$order" != "order_4" ];then
         flag=0
     fi
     if [ "$flag" == "1" ];then

@@ -28,7 +28,10 @@ adaprompt=${22:-"0"}
 reinit=${23:-"0"}
 ortho_mu=${24:-"0"}
 gap_layers=${25:-"4"}
-max_samples=${26:-"1000000"}
+bakebone=${26:-"0"}
+nomlp=${27:-"0"}
+project=${28:-"0"}
+max_samples=${29:-"1000000"}
 extra_args=""
 save_steps=1000
 cutoff_len=2048
@@ -88,6 +91,13 @@ model="${model_name_or_path##*/}"
 if [ "$model" = "llama3-8b" ];then
     model_name_or_path=meta-llama/Meta-Llama-3-8B
     cutoff_len=4096
+fi
+if [ "$model" = "llama3.1-8b" ];then
+    model_name_or_path=meta-llama/Llama-3.1-8B
+    cutoff_len=1024
+    if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
+        cutoff_len=800
+    fi
 fi
 if [ "$model" = "llama3-8b-inst" ];then
     model_name_or_path=meta-llama/Meta-Llama-3-8B-Instruct
@@ -302,6 +312,29 @@ if [ "$gap_layers" != "4" ];then
     eval_path="${eval_path}_gap_layers${gap_layers}"
 fi
 
+if [ "$bakebone" != "0" ];then
+    extra_args="$extra_args --scale_bakebone"
+    save_path="${save_path}_bakebone"
+    run_name="${run_name}_bakebone"
+    merge_path="${merge_path}_bakebone"
+    eval_path="${eval_path}_bakebone"
+fi
+
+if [ "$nomlp" != "0" ];then
+    extra_args="$extra_args --nomlp"
+    save_path="${save_path}_nomlp"
+    run_name="${run_name}_nomlp"
+    merge_path="${merge_path}_nomlp"
+    eval_path="${eval_path}_nomlp"
+fi
+
+if [ "$project" != "0" ];then
+    extra_args="$extra_args --project ${project}"
+    save_path="${save_path}_project${project}"
+    run_name="${run_name}_project${project}"
+    merge_path="${merge_path}_project${project}"
+    eval_path="${eval_path}_project${project}"
+fi
 
 if [ "$mode" == "all" ];then
     extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
@@ -324,7 +357,7 @@ bs0=${bs}
 cutoff_len0=${cutoff_len}
 gradient_accumulation_steps0=${gradient_accumulation_steps}
 flag=1
-
+# mkdir -p $pwd /modelopsnas/modelops/468440/cl/${save_prefix}
 for part in "${parts[@]}"; do
     echo ""
     for (( i=1; i<=50; i++ ))
@@ -471,5 +504,5 @@ done
 
 echo "mv  ${save_path}"
 bash config/rm.sh ${save_path} safetensors
-sleep 10
+sleep 30
 # cp -rf ${save_path} /modelopsnas/modelops/468440/cl/${save_path}

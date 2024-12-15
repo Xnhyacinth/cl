@@ -390,7 +390,15 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
         default=None,
         metadata={"help": "ortho loss weight."},
     )
-    scale_bakebone: float = field(
+    scale_bakebone: bool = field(
+        default=None,
+        metadata={"help": "ortho loss weight."},
+    )
+    nomlp: bool = field(
+        default=None,
+        metadata={"help": "ortho loss weight."},
+    )
+    project: int = field(
         default=None,
         metadata={"help": "ortho loss weight."},
     )

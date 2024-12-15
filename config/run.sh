@@ -25,6 +25,9 @@ adaprompt=${17:-"0"}
 reinit=${18:-"0"}
 ortho_mu=${19:-"0"}
 gap_layers=${20:-"4"}
+bakebone=${21-"0"}
+nomlp=${22:-"0"}
+project=${23:-"0"}
 # bash config/train.sh 1 9 tinyllama order_1 lora 1 1e-4 8 fewshot -1 1e-10 8
 for i in {4..6}; do
     for seed in "${seeds[@]}"; do
@@ -65,10 +68,19 @@ for i in {4..6}; do
         if [ "$gap_layers" != "4" ];then
             output_prefix="${output_prefix}_gap_layers${gap_layers}"
         fi
+        if [ "$bakebone" != "0" ];then
+            output_prefix="${output_prefix}_bakebone"
+        fi
+        if [ "$nomlp" != "0" ];then
+            output_prefix="${output_prefix}_nomlp"
+        fi
+        if [ "$project" != "0" ];then
+            output_prefix="${output_prefix}_project"
+        fi
         mkdir -p ${output_prefix}
         LOGFILE="${output_prefix}/train_and_infer.log"
-        # bash config/train1.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers}
-        bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} > "$LOGFILE" 2>&1
+        # bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} ${bakebone} ${nomlp}
+        bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} ${bakebone} ${nomlp} ${project} > "$LOGFILE" 2>&1
     done
 done
 # 
