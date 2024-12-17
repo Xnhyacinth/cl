@@ -3,12 +3,81 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 import torch.jit
-from transformers import T5ForConditionalGeneration, LlamaForCausalLM
+from transformers import T5ForConditionalGeneration, LlamaForCausalLM, Qwen2ForCausalLM
 import PIL
 import torchvision.transforms as transforms
 from .inject_vida import *
 from time import time
 import logging
+
+class Qwen2Vida(Qwen2ForCausalLM):
+    def __init__(self, config):
+        super().__init__(config)
+        self.wrap_model()
+
+    def wrap_model(self):
+        if self.config.nomlp:
+            logging.info('nomlp')
+            inject_trainable_vida(self, target_replace_module=[
+                              "Qwen2SdpaAttention", "Qwen2Attention", "Qwen2FlashAttention2"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        else:
+            inject_trainable_vida(self, target_replace_module=[
+                              "Qwen2MLP", "Qwen2SdpaAttention", "Qwen2Attention", "Qwen2FlashAttention2"], r=self.config.vida_rank1, r2=self.config.vida_rank2)
+        if self.config.adaprompt:
+            self.model.prompt_init()
+
+    def unwrap_model(self):
+        uninject_trainable_vida(self, target_replace_module=[
+                                "Qwen2MLP", "Qwen2SdpaAttention", "Qwen2Attention", "Qwen2FlashAttention2"])
+        if self.config.adaprompt:
+            for e in range(self.config.num_hidden_layers // self.config.gap_layers):
+                delattr(self.model, f"vida_a_{e}")
+                delattr(self.model, f"vida_k_{e}")
+                delattr(self.model, f"vida_w_{e}")
+                delattr(self.model, f"vida_w2_{e}")
+                delattr(self.model, f"vida_a2_{e}")
+                delattr(self.model, f"vida_k2_{e}")
+                if self.config.scale_bakebone:
+                    delattr(self.model, f"vida_w3_{e}")
+                    delattr(self.model, f"vida_a3_{e}")
+                    delattr(self.model, f"vida_k3_{e}")
+
+    def load_model(self, state_dict):
+        self.unwrap_model()
+        self.load_state_dict(state_dict)
+        self.wrap_model()
+
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+    ):
+        return super().forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            labels=labels,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            cache_position=cache_position,
+        )
+
+    def generate(self, **kwargs):
+        # kwargs.pop('labels', None)
+        return super().generate(**kwargs)
 
 
 class LlamaVida(LlamaForCausalLM):

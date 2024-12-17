@@ -27,7 +27,7 @@ from .model_utils.mod import convert_pretrained_model_to_mod, load_mod_pretraine
 from .model_utils.unsloth import load_unsloth_pretrained_model
 from .model_utils.valuehead import load_valuehead_params
 from .patcher import patch_config, patch_model, patch_processor, patch_tokenizer, patch_valuehead_model
-from .vida import T5Vida, LlamaVida
+from .vida import T5Vida, LlamaVida, Qwen2Vida
 
 if TYPE_CHECKING:
     from transformers import PretrainedConfig, PreTrainedModel, PreTrainedTokenizer, ProcessorMixin
@@ -160,6 +160,8 @@ def load_model(
                     load_class = T5Vida
                 elif 'llama' in model_args.model_name_or_path.lower():
                     load_class = LlamaVida
+                elif 'qwen2' in model_args.model_name_or_path.lower():
+                    load_class = Qwen2Vida
             elif 't5' in model_args.model_name_or_path.lower():
                 load_class = T5ForConditionalGeneration
             else:
@@ -197,6 +199,8 @@ def load_model(
             load_class = T5Vida
         elif 'llama' in model_args.model_name_or_path.lower():
             load_class = LlamaVida
+        elif 'qwen2' in model_args.model_name_or_path.lower():
+            load_class = Qwen2Vida
             
         vida_config = {
             "is_vida": finetuning_args.is_vida,
@@ -211,24 +215,28 @@ def load_model(
             "nomlp": finetuning_args.nomlp,
             "project": finetuning_args.project
         }
-        print(model)
+        # print(model)
         model.config.update(vida_config)
         state_dict = model.state_dict()
         model = load_class(model.config)
         model.load_model(state_dict)
         logger.info("Loaded ViDA model.")
         if finetuning_args.adaprompt:
-            if 'llama' in model_args.model_name_or_path.lower():
-                model.model.post_prompt_init()
-            elif 't5' in model_args.model_name_or_path.lower():
+            if 't5' in model_args.model_name_or_path.lower():
                 model.encoder.post_prompt_init()
                 model.decoder.post_prompt_init()
+            else:
+                model.model.post_prompt_init()
     elif finetuning_args.is_vida and finetuning_args.adaprompt and finetuning_args.task_id > 0 and finetuning_args.reinit and '_eval' not in finetuning_args.output_dir:
-        if 'llama' in model_args.model_name_or_path.lower():
-            model.model.post_prompt_init()
-        elif 't5' in model_args.model_name_or_path.lower():
+        # if 'llama' in model_args.model_name_or_path.lower():
+        #     model.model.post_prompt_init()
+        # elif 'qwen2' in model_args.model_name_or_path.lower():
+        #     model.model.post_prompt_init()
+        if 't5' in model_args.model_name_or_path.lower():
             model.encoder.post_prompt_init()
             model.decoder.post_prompt_init()
+        else:
+            model.model.post_prompt_init()
         
     
     if not is_trainable:

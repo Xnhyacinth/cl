@@ -118,6 +118,4 @@ def get_logger(name: Optional[str] = None) -> "logging.Logger":
         name = _get_library_name()
 
     _configure_library_root_logger()
-    from transformers.utils import logging
-    return logging.get_logger(name)
-    # return logging.getLogger(name)
+    return logging.getLogger(name)
