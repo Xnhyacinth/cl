@@ -1127,8 +1127,8 @@ class LlamaModel(LlamaPreTrainedModel):
                 module.scale1 = low
             if hasattr(module, 'scale2'):
                 module.scale2 = high
-            if hasattr(module, 'scale3'):
-                module.scale3 = bakebone
+            # if hasattr(module, 'scale3'):
+            #     module.scale3 = bakebone
 
     @add_start_docstrings_to_model_forward(LLAMA_INPUTS_DOCSTRING)
     def forward(
@@ -1215,23 +1215,23 @@ class LlamaModel(LlamaPreTrainedModel):
                     scale1, ortho_loss1 = self.get_scale(hidden_states, 'scale1', e)
                     scale2, ortho_loss2 = self.get_scale(hidden_states, 'scale2', e)
                     scale3 = 1.0
-                    if self.config.scale_bakebone:
-                        scale3, ortho_loss3 = self.get_scale(hidden_states, 'scale3', e)
-                        # scales = torch.stack([scale1, scale2, scale3])
-                        # scales_sft = nn.functional.softmax(scales, dim=-1).type_as(
-                        #     scales
-                        # )
-                        # breakpoint()
-                        # scale1, scale2, scale3 = scales_sft[0], scales_sft[2], scales_sft[2]
-                        scale3 = torch.sigmoid(scale3)
-                        scale2 = torch.sigmoid(scale2)
-                        scale1 = torch.sigmoid(scale1)
-                    if self.config.ortho_mu and self.training and self.config.scale_bakebone:
-                        ortho_loss.append((ortho_loss1 + ortho_loss2 + ortho_loss3) / 3)
-                    elif self.config.ortho_mu and self.training:
+                    # if self.config.scale_bakebone:
+                    #     scale3, ortho_loss3 = self.get_scale(hidden_states, 'scale3', e)
+                    #     # scales = torch.stack([scale1, scale2, scale3])
+                    #     # scales_sft = nn.functional.softmax(scales, dim=-1).type_as(
+                    #     #     scales
+                    #     # )
+                    #     # breakpoint()
+                    #     # scale1, scale2, scale3 = scales_sft[0], scales_sft[2], scales_sft[2]
+                    #     scale3 = torch.sigmoid(scale3)
+                        # scale2 = torch.sigmoid(scale2)
+                        # scale1 = torch.sigmoid(scale1)
+                    # if self.config.ortho_mu and self.training and self.config.scale_bakebone:
+                    #     ortho_loss.append((ortho_loss1 + ortho_loss2 + ortho_loss3) / 3)
+                    if self.config.ortho_mu and self.training:
                         ortho_loss.append((ortho_loss1 + ortho_loss2) / 2)
-                        scale2 = torch.sigmoid(scale2)
-                        scale1 = torch.sigmoid(scale1)
+                    scale2 = torch.sigmoid(scale2)
+                    scale1 = torch.sigmoid(scale1)
                     self.set_scale(self.layers[e * self.config.gap_layers: (e + 1) * self.config.gap_layers], scale2, scale1, scale3)
                     # breakpoint()
             
@@ -1282,7 +1282,7 @@ class LlamaModel(LlamaPreTrainedModel):
         
         if hasattr(self.config, 'ortho_mu') and self.config.ortho_mu and self.training:
             ortho_loss = torch.mean(torch.stack(ortho_loss))
-            
+
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=next_cache,

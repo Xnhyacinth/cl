@@ -61,8 +61,8 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 # ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep llama3.1-8b|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep train|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep order2|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep order.sh|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep run4|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep config/|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep "0 llam"|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep -E 'run|train'|grep -v grep |cut -c 9-14|xargs kill -9
 # datasets="2_3_lower 2_3_upper 4_5_lower 4_5_upper"
