@@ -60,7 +60,7 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 # ps -ef |grep migu|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep llama3.1-8b|grep -v grep |cut -c 9-16|xargs kill -9
-# ps -ef |grep 1_1.py|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep git|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep config/|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep train|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep "0 llam"|grep -v grep |cut -c 9-16|xargs kill -9
@@ -76,3 +76,5 @@ bash config/run3.sh 1 0 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4 1
 
 # # zeta co https://liaohuanxuan.lhx:6eFp5A9sWrNBxK5LqNDF38g6A@zeta.alipay.com/zeta/cl
 # zeta config core.remote https://liaohuanxuan.lhx:6eFp5A9sWrNBxK5LqNDF38g6A@zeta.alipay.com/zeta/cl
+
+# export HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1
