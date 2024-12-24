@@ -28,6 +28,7 @@ gap_layers=${20:-"4"}
 bakebone=${21-"0"}
 nomlp=${22:-"0"}
 project=${23:-"0"}
+replay=${24:-"0"}
 # bash config/train.sh 1 9 tinyllama order_1 lora 1 1e-4 8 fewshot -1 1e-10 8
 for i in {1..6}; do
     for seed in "${seeds[@]}"; do
@@ -77,10 +78,13 @@ for i in {1..6}; do
         if [ "$project" != "0" ];then
             output_prefix="${output_prefix}_project"
         fi
+        if [ "$replay" != "0" ];then
+            output_prefix="${output_prefix}_replay"
+        fi
         mkdir -p ${output_prefix}
         LOGFILE="${output_prefix}/train_and_infer.log"
         # bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} ${bakebone} ${nomlp}
-        bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} ${bakebone} ${nomlp} ${project} > "$LOGFILE" 2>&1
+        bash config/train.sh ${num_gpus} ${gpus} ${model} order_${i} ${tuning_method} 1 ${lr} ${bs} fewshot ${deepspeed} 1e-10 ${r} ${lr_type} ${seed} ${filter} ${mode} ${select} ${vida_rank1} ${vida_rank2} ${restore} ${scale} ${adaprompt} ${reinit} ${ortho_mu} ${gap_layers} ${bakebone} ${nomlp} ${project} ${replay} > "$LOGFILE" 2>&1
     done
 done
 # 

@@ -121,6 +121,10 @@ class DataArguments:
         default_factory=list, 
         metadata={"help": "List of orders."}
     )
+    replay: bool = field(
+        default=None,
+        metadata={"help": "whether use replay."},
+    )
 
     def __post_init__(self):
         def split_arg(arg):

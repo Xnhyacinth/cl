@@ -376,7 +376,7 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
     )
     task_id: int = field(
         default=None,
-        metadata={"help": "Whether use adaprompt."},
+        metadata={"help": "the id of task."},
     )
     gap_layers: int = field(
         default=4,
@@ -392,15 +392,15 @@ class FinetuningArguments(FreezeArguments, LoraArguments, RLHFArguments, GaloreA
     )
     scale_bakebone: bool = field(
         default=None,
-        metadata={"help": "ortho loss weight."},
+        metadata={"help": "whether scale backbone."},
     )
     nomlp: bool = field(
         default=None,
-        metadata={"help": "ortho loss weight."},
+        metadata={"help": "whether use mlp."},
     )
     project: int = field(
         default=None,
-        metadata={"help": "ortho loss weight."},
+        metadata={"help": "project length."},
     )
 
     def __post_init__(self):

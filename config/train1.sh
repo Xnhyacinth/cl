@@ -31,7 +31,8 @@ gap_layers=${25:-"4"}
 bakebone=${26:-"0"}
 nomlp=${27:-"0"}
 project=${28:-"0"}
-max_samples=${29:-"1000000"}
+replay=${29:-"0"}
+max_samples=${30:-"1000000"}
 extra_args=""
 save_steps=1000
 cutoff_len=2048
@@ -62,6 +63,11 @@ fi
 if [ "$order" == "order_6" ];then
    orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
 fi
+
+# trace
+if [ "$order" == "order_7" ];then
+   orders=c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
+fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
 orders=${orders//,/ }
@@ -82,6 +88,7 @@ if [ "$num_gpus" == "1" ] && [ "$bs" != "16" ];then
 fi
 
 let eval_bs=bs*4
+eval_bs=8
 if [ "$eval_bs" -gt 16 ]; then
     eval_bs=16
 fi
@@ -336,6 +343,14 @@ if [ "$project" != "0" ];then
     eval_path="${eval_path}_project${project}"
 fi
 
+if [ "$replay" != "0" ];then
+    extra_args="$extra_args --replay"
+    save_path="${save_path}_replay"
+    run_name="${run_name}_replay"
+    merge_path="${merge_path}_replay"
+    eval_path="${eval_path}_replay"
+fi
+
 if [ "$mode" == "all" ];then
     extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
 fi
@@ -367,18 +382,19 @@ for part in "${parts[@]}"; do
     echo ""
     echo "$part"
     
-    if [ "$idx" == "0" ];then
+   if [ "$idx" == "0" ];then
         eval_dataset="cl_${part}_eval"
+        train_dataset=cl_${part}
     fi
     if [ "$idx" != "0" ];then
+        eval_dataset="${eval_dataset},cl_${part}_eval"
+        train_dataset="${train_dataset},cl_${part}"
         if [ "$finetuning_type" == "lora" ];then
             adapter_name_or_path=${save_prefix}/${idx}-${pre_part}
-            eval_dataset="${eval_dataset},cl_${part}_eval"
             extra_args="${extra_args0} --adapter_name_or_path ${adapter_name_or_path}"
         fi
         if [ "$is_vida" == "True" ];then
             model_name_or_path=${save_prefix}/${idx}-${pre_part}
-            eval_dataset="${eval_dataset},cl_${part}_eval"
             extra_args="${extra_args0}"
         fi
     fi
@@ -387,6 +403,9 @@ for part in "${parts[@]}"; do
     dataset=cl_${part}
     if [ "$filter" != "0" ];then
         dataset="${dataset}_${filter}"
+    fi
+    if [ "$replay" != "0" ];then
+        dataset=${train_dataset}
     fi
 
     ((idx+=1))
@@ -445,6 +464,15 @@ for part in "${parts[@]}"; do
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
+     if [ "$part" == "c-stance" ] || [ "$part" == "py150" ] || [ "$part" == "numglue-cm" ] || [ "$part" == "numglue-ds" ];then
+        epoch=5
+    fi
+    if [ "$part" == "meetingbank" ] || [ "$part" == "20minuten" ];then
+        epoch=7
+    fi
+    if [ "$part" == "fomc" ] || [ "$part" == "scienceqa" ];then
+        epoch=3
+    fi
     
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"
@@ -502,7 +530,7 @@ for part in "${parts[@]}"; do
     fi
 done
 
-echo "mv  ${save_path}"
-bash config/rm.sh ${save_path} safetensors
+# echo "mv  ${save_path}"
+# bash config/rm.sh ${save_path} safetensors
 sleep 30
 # cp -rf ${save_path} /modelopsnas/modelops/468440/cl/${save_path}

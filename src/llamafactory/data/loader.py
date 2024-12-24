@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Dict, Literal, Optional, Sequence, Union
 import numpy as np
 from datasets import DatasetDict, load_dataset, load_from_disk
 from transformers.utils.versions import require_version
-
+import random
 from ..extras.constants import FILEEXT2TYPE
 from ..extras.logging import get_logger
 from ..extras.misc import has_tokenized_data
@@ -160,6 +160,7 @@ def _get_merged_dataset(
     data_args: "DataArguments",
     training_args: "Seq2SeqTrainingArguments",
     stage: Literal["pt", "sft", "rm", "ppo", "kto", "cl"],
+    is_eval: bool = False,
 ) -> Optional[Union["Dataset", "IterableDataset"]]:
     r"""
     Gets the merged datasets in the standard format.
@@ -168,11 +169,20 @@ def _get_merged_dataset(
         return None
 
     datasets = []
-    for dataset_attr in get_dataset_list(dataset_names, data_args.dataset_dir):
+    dataset_list = get_dataset_list(dataset_names, data_args.dataset_dir)
+    dataset_num = len(dataset_list)
+    for idx, dataset_attr in enumerate(dataset_list):
         if (stage == "rm" and dataset_attr.ranking is False) or (stage != "rm" and dataset_attr.ranking is True):
             raise ValueError("The dataset is not applicable in the current training stage.")
 
-        datasets.append(_load_single_dataset(dataset_attr, model_args, data_args, training_args))
+        if data_args.replay and idx < dataset_num - 1 and not is_eval:
+            train_dataset = _load_single_dataset(dataset_attr, model_args, data_args, training_args)
+            total_num_examples = len(train_dataset)
+            random_indices = random.sample(range(total_num_examples), int(total_num_examples * 0.02))
+            logger.info(f'len random select: {len(random_indices)} for {dataset_attr.dataset_name}')
+            datasets.append(train_dataset.select(random_indices))
+        else:
+            datasets.append(_load_single_dataset(dataset_attr, model_args, data_args, training_args))
 
     return merge_dataset(datasets, data_args, seed=training_args.seed)
 
@@ -271,7 +281,7 @@ def get_dataset(
     # Load and preprocess dataset
     with training_args.main_process_first(desc="load dataset"):
         dataset = _get_merged_dataset(data_args.dataset, model_args, data_args, training_args, stage)
-        eval_dataset = _get_merged_dataset(data_args.eval_dataset, model_args, data_args, training_args, stage)
+        eval_dataset = _get_merged_dataset(data_args.eval_dataset, model_args, data_args, training_args, stage, is_eval=True)
 
     with training_args.main_process_first(desc="pre-process dataset"):
         dataset = _get_preprocessed_dataset(

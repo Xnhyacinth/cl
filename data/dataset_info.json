@@ -1,4 +1,76 @@
 {
+  "cl_20minuten": {
+    "file_name": "trace/20Minuten/train.json",
+    "formatting": "cl"
+  },
+  "cl_c-stance": {
+    "file_name": "trace/C-STANCE/train.json",
+    "formatting": "cl"
+  },
+  "cl_fomc": {
+    "file_name": "trace/FOMC/train.json",
+    "formatting": "cl"
+  },
+  "cl_lima": {
+    "file_name": "trace/Lima/train.json",
+    "formatting": "cl"
+  },
+  "cl_meetingbank": {
+    "file_name": "trace/MeetingBank/train.json",
+    "formatting": "cl"
+  },
+  "cl_numglue-cm": {
+    "file_name": "trace/NumGLUE-cm/train.json",
+    "formatting": "cl"
+  },
+  "cl_numglue-ds": {
+    "file_name": "trace/NumGLUE-ds/train.json",
+    "formatting": "cl"
+  },
+  "cl_py150": {
+    "file_name": "trace/Py150/train.json",
+    "formatting": "cl"
+  },
+  "cl_scienceqa": {
+    "file_name": "trace/ScienceQA/train.json",
+    "formatting": "cl"
+  },
+  "cl_20minuten_eval": {
+    "file_name": "trace/20Minuten/test.json",
+    "formatting": "cl"
+  },
+  "cl_c-stance_eval": {
+    "file_name": "trace/C-STANCE/test.json",
+    "formatting": "cl"
+  },
+  "cl_fomc_eval": {
+    "file_name": "trace/FOMC/test.json",
+    "formatting": "cl"
+  },
+  "cl_lima_eval": {
+    "file_name": "trace/Lima/test.json",
+    "formatting": "cl"
+  },
+  "cl_meetingbank_eval": {
+    "file_name": "trace/MeetingBank/test.json",
+    "formatting": "cl"
+  },
+  "cl_numglue-cm_eval": {
+    "file_name": "trace/NumGLUE-cm/test.json",
+    "formatting": "cl"
+  },
+  "cl_numglue-ds_eval": {
+    "file_name": "trace/NumGLUE-ds/test.json",
+    "formatting": "cl"
+  },
+  "cl_py150_eval": {
+    "file_name": "trace/Py150/test.json",
+    "formatting": "cl"
+  },
+  "cl_scienceqa_eval": {
+    "file_name": "trace/ScienceQA/test.json",
+    "formatting": "cl"
+  },
   "cl_mnli": {
     "file_name": "CL/NLI/MNLI/train.json",
     "formatting": "cl"
@@ -343,7 +415,7 @@
     "file_name": "CL/TC/agnews/train_llama2_4000_lower.json",
     "formatting": "cl"
   },
-   "cl_dbpedia_3500_lower": {
+  "cl_dbpedia_3500_lower": {
     "file_name": "CL/TC/dbpedia/train_t5_3500_lower.json",
     "formatting": "cl"
   },
@@ -471,7 +543,7 @@
     "file_name": "CL/TC/agnews/train_llama2_3000_lower.json",
     "formatting": "cl"
   },
-   "cl_dbpedia_2500_lower": {
+  "cl_dbpedia_2500_lower": {
     "file_name": "CL/TC/dbpedia/train_t5_2500_lower.json",
     "formatting": "cl"
   },

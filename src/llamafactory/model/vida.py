@@ -82,22 +82,6 @@ class Qwen2Vida(Qwen2ForCausalLM):
 
 class LlamaVida(LlamaForCausalLM):
     def __init__(self, config):
-        if 'adaprompt' not in config.to_dict().keys():
-            config.adaprompt = None
-        if 'n_tasks' not in config.to_dict().keys():
-            config.n_tasks = None
-        if 'task_id' not in config.to_dict().keys():
-            config.task_id = None
-        if 'gap_layers' not in config.to_dict().keys():
-            config.gap_layers = None
-        if 'ortho_mu' not in config.to_dict().keys():
-            config.ortho_mu = None
-        if 'scale_bakebone' not in config.to_dict().keys():
-            config.scale_bakebone = None
-        if 'nomlp' not in config.to_dict().keys():
-            config.nomlp = None
-        if 'project' not in config.to_dict().keys():
-            config.project = None
         super().__init__(config)
         self.wrap_model()
 
@@ -168,22 +152,6 @@ class LlamaVida(LlamaForCausalLM):
 
 class T5Vida(T5ForConditionalGeneration):
     def __init__(self, config):
-        if 'adaprompt' not in config.to_dict().keys():
-            config.adaprompt = None
-        if 'n_tasks' not in config.to_dict().keys():
-            config.n_tasks = None
-        if 'task_id' not in config.to_dict().keys():
-            config.task_id = None
-        if 'gap_layers' not in config.to_dict().keys():
-            config.gap_layers = None
-        if 'ortho_mu' not in config.to_dict().keys():
-            config.ortho_mu = None
-        if 'scale_bakebone' not in config.to_dict().keys():
-            config.scale_bakebone = None
-        if 'nomlp' not in config.to_dict().keys():
-            config.nomlp = None
-        if 'project' not in config.to_dict().keys():
-            config.project = None
         super().__init__(config)
         self.wrap_model()
 

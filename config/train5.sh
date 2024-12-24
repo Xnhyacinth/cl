@@ -29,7 +29,9 @@ reinit=${23:-"0"}
 ortho_mu=${24:-"0"}
 gap_layers=${25:-"4"}
 bakebone=${26:-"0"}
-max_samples=${27:-"1000000"}
+nomlp=${27:-"0"}
+project=${28:-"0"}
+max_samples=${29:-"1000000"}
 extra_args=""
 save_steps=1000
 cutoff_len=2048
@@ -80,6 +82,7 @@ if [ "$num_gpus" == "1" ] && [ "$bs" != "16" ];then
 fi
 
 let eval_bs=bs*4
+eval_bs=8
 if [ "$eval_bs" -gt 16 ]; then
     eval_bs=16
 fi
@@ -93,6 +96,7 @@ fi
 if [ "$model" = "llama3.1-8b" ];then
     model_name_or_path=meta-llama/Llama-3.1-8B
     cutoff_len=1024
+    gradient_accumulation_steps=$((gradient_accumulation_steps / 2))
     if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
         cutoff_len=800
     fi
@@ -318,6 +322,22 @@ if [ "$bakebone" != "0" ];then
     eval_path="${eval_path}_bakebone"
 fi
 
+if [ "$nomlp" != "0" ];then
+    extra_args="$extra_args --nomlp"
+    save_path="${save_path}_nomlp"
+    run_name="${run_name}_nomlp"
+    merge_path="${merge_path}_nomlp"
+    eval_path="${eval_path}_nomlp"
+fi
+
+if [ "$project" != "0" ];then
+    extra_args="$extra_args --project ${project}"
+    save_path="${save_path}_project${project}"
+    run_name="${run_name}_project${project}"
+    merge_path="${merge_path}_project${project}"
+    eval_path="${eval_path}_project${project}"
+fi
+
 if [ "$mode" == "all" ];then
     # extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
     extra_args="${extra_args} --do_train"
@@ -428,15 +448,6 @@ for part in "${parts[@]}"; do
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
-    if [ "$part" == "yahoo" ] && [ "$order" == "order_4" ];then
-        flag=0
-    fi
-    if [ "$part" == "imdb" ] && [ "$order" != "order_4" ];then
-        flag=0
-    fi
-    if [ "$flag" == "1" ];then
-        continue
-    fi
     
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"
@@ -494,7 +505,7 @@ for part in "${parts[@]}"; do
     fi
 done
 
-echo "mv  ${save_path}"
-bash config/rm.sh ${save_path} safetensors
-sleep 10
+# echo "mv  ${save_path}"
+# bash config/rm.sh ${save_path} safetensors
+sleep 30
 # cp -rf ${save_path} /modelopsnas/modelops/468440/cl/${save_path}
