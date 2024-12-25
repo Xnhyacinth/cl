@@ -6,7 +6,7 @@
 ### 
 
 # bash config/run2.sh 1 1 llama2-7b vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4
-bash config/run3.sh 1 8 t5-large full 1 constant 1e-4 0 eval 30 8 -1 2 16 0 0 4 1 1000
+bash config/run3.sh 1 1 llama2-7b full 1 constant 1e-4 0 eval 30 8 -1 2 16 0 0 4 1 1000
 # bash config/run1.sh 1 7 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 2
 
 # nohup bash config/run.sh 2 1,2 t5-large vida 2 constant 1e-4 0 all 0 8 -1 4 8 > logs/dd.log 2>&1 &

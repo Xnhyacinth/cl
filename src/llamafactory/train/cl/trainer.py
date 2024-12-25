@@ -348,11 +348,13 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
                 # if generated_tokens.shape[-1] < gen_config.max_length:
                 #     generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_config.max_length)
                 # elif gen_config.max_new_tokens is not None and generated_tokens.shape[-1] < gen_config.max_new_tokens + 1:
-                generated_tokens = self._pad_tensors_to_max_len(generated_tokens, self._gen_kwargs['max_new_tokens'] + 1)
+                # generated_tokens = self._pad_tensors_to_max_len(generated_tokens, self._gen_kwargs['max_new_tokens'] + 1)
                 all_losses.append(loss)
                 all_generated_tokens.append(generated_tokens)
             logger.info(f'error gen config: {self._gen_kwargs.copy()}')
             loss = sum(all_losses)
+            max_len = max([tokens.size(-1) for tokens in all_generated_tokens])
+            all_generated_tokens = [self._pad_tensors_to_max_len(generated_tokens, max_len) for generated_tokens in all_generated_tokens]
             generated_tokens = torch.cat(all_generated_tokens, dim=0)
         else:
             if self.args.adaprompt:

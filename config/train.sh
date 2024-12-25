@@ -420,7 +420,7 @@ for part in "${parts[@]}"; do
             extra_args="${extra_args} --eval_dataset ${eval_dataset}"
         fi
         if [ "$finetuning_type" == "full" ];then
-            model_name_or_path=google-t5/t5-large
+            model_name_or_path=meta-llama/Llama-2-7b-hf
             extra_args="${extra_args0} --eval_dataset ${eval_dataset}"
         fi
         if [ "$is_vida" == "True" ];then
