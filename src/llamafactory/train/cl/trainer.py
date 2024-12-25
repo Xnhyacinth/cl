@@ -334,7 +334,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             for task_id in unique_task_ids:
                 mask = task_ids == task_id
                 task_specific_inputs = {k: v[mask] for k, v in inputs.items()}
-                
+
                 if 't5' in self.model.config.architectures[0].lower():
                     self.model.encoder.task_id = task_id
                     self.model.decoder.task_id = task_id
@@ -345,8 +345,13 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
                 loss, generated_tokens, _ = super().prediction_step(
                     model, task_specific_inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
                 )
+                # if generated_tokens.shape[-1] < gen_config.max_length:
+                #     generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_config.max_length)
+                # elif gen_config.max_new_tokens is not None and generated_tokens.shape[-1] < gen_config.max_new_tokens + 1:
+                generated_tokens = self._pad_tensors_to_max_len(generated_tokens, self._gen_kwargs['max_new_tokens'] + 1)
                 all_losses.append(loss)
                 all_generated_tokens.append(generated_tokens)
+            logger.info(f'error gen config: {self._gen_kwargs.copy()}')
             loss = sum(all_losses)
             generated_tokens = torch.cat(all_generated_tokens, dim=0)
         else:

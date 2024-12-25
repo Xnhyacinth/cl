@@ -38,7 +38,7 @@ save_steps=1000
 cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
-
+max_new_tokens=50
 # bash patch/install.sh
 
 if [ "$lr_scheduler_type" == "constant" ];then
@@ -66,6 +66,7 @@ fi
 # trace
 if [ "$order" == "order_7" ];then
    orders=c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
+   max_new_tokens=512
 fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
@@ -508,7 +509,7 @@ for part in "${parts[@]}"; do
         --num_train_epochs ${epoch} \
         --max_samples ${max_samples} \
         --ddp_timeout 180000000 \
-        --max_new_tokens 50 \
+        --max_new_tokens ${max_new_tokens} \
         --plot_loss \
         --report_to wandb \
         --remove_unused_columns False \

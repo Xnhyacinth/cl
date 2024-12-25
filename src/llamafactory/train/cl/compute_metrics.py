@@ -118,7 +118,7 @@ def metric_max_over_ground_truths(metric_fn, prediction, ground_truths, xlingual
     return max(scores_for_ground_truths)
 
 
-def compute_metrics(predictions, references, xlingual=False, inputs=None):
+def compute_metrics(predictions, references, xlingual=False, inputs=None, group=None):
     assert len(predictions) == len(references), f"# of predictions {len(predictions)} doesn't match # of references {len(references)}."
     exact_match, rouge1, rougeL = 0, 0, 0
     for pred, gold in zip(predictions, references):
@@ -135,9 +135,14 @@ def compute_metrics(predictions, references, xlingual=False, inputs=None):
     exact_match = 100.0 * exact_match / len(references)
     rouge1 = 100.0 * rouge1 / len(references)
     rougeL = 100.0 * rougeL / len(references)
-    sari = sari_score(predictions=predictions, ground_truths=references, inputs=inputs)['sari']
-    sim = sim_score(predictions=predictions, ground_truths=references)['similarity']
-    metrics = {"exact_match": exact_match, "rouge1": rouge1, "rougeL": rougeL, "sari": sari, "similarity": sari}
+    metrics = {"exact_match": exact_match, "rouge1": rouge1, "rougeL": rougeL}
+    # metrics = {"exact_match": exact_match, "rouge1": rouge1, "rougeL": rougeL, "sari": sari, "similarity": sim}
+    if group == '20minuten':
+        sari = sari_score(predictions=predictions, ground_truths=references, inputs=inputs)['sari']
+        metrics.update({"sari": sari})
+    if group == 'py150':
+        sim = sim_score(predictions=predictions, ground_truths=references)['similarity']
+        metrics.update({"similarity": sim})
     metrics = {k: round(v, 4) for k, v in metrics.items()}
     return metrics
 
@@ -146,15 +151,15 @@ def compute_grouped_metrics(predictions, references, groups, xlingual=False, inp
     assert len(predictions) == len(references) == len(groups)
 
     examples_by_group = {}
-    for pred, gold, group in zip(predictions, references, groups):
+    for pred, gold, group, input in zip(predictions, references, groups, inputs):
         if group not in examples_by_group:
             examples_by_group[group] = []
-        examples_by_group[group].append((pred, gold))
+        examples_by_group[group].append((pred, gold, input))
     
     results = {}
     for group, group_examples in examples_by_group.items():
-        task_predictions, task_references = zip(*group_examples)
-        group_metrics = compute_metrics(task_predictions, task_references, xlingual=xlingual, inputs=inputs)
+        task_predictions, task_references, inputs = zip(*group_examples)
+        group_metrics = compute_metrics(task_predictions, task_references, xlingual=xlingual, inputs=inputs, group=group)
         for metric, value in group_metrics.items():
             results[f"{metric}_for_{group}"] = value
     return results
