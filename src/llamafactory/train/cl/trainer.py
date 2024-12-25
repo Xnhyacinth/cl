@@ -325,17 +325,42 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             self.set_scale(update_model=model, high=lambda_high, low=lambda_low)
             self.set_scale(update_model=self.model_ema, high=lambda_high, low=lambda_low)
             # breakpoint()
-        task_id = inputs.pop('task_id')
-        if self.args.adaprompt:
-            if 't5' in self.model.config.architectures[0].lower():
-                self.model.encoder.task_id = task_id[0]
-                self.model.decoder.task_id = task_id[0]
-            elif 'llama' in self.model.config.architectures[0].lower():
-                self.model.model.task_id = task_id[0]
+        task_ids = inputs.pop('task_id')
+        if self.args.adaprompt and len(task_ids) > 1 and task_ids[0] != task_ids[-1]:
+            unique_task_ids = set(task_ids)
+            all_losses = []
+            all_generated_tokens = []
+            logger.info(f'task id diff: {unique_task_ids}')
+            for task_id in unique_task_ids:
+                mask = task_ids == task_id
+                task_specific_inputs = {k: v[mask] for k, v in inputs.items()}
                 
-        loss, generated_tokens, _ = super().prediction_step(  # ignore the returned labels (may be truncated)
-            model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
-        )
+                if 't5' in self.model.config.architectures[0].lower():
+                    self.model.encoder.task_id = task_id
+                    self.model.decoder.task_id = task_id
+                # elif 'llama' in self.model.config.architectures[0].lower():
+                else:
+                    self.model.model.task_id = task_id
+
+                loss, generated_tokens, _ = super().prediction_step(
+                    model, task_specific_inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
+                )
+                all_losses.append(loss)
+                all_generated_tokens.append(generated_tokens)
+            loss = sum(all_losses)
+            generated_tokens = torch.cat(all_generated_tokens, dim=0)
+        else:
+            if self.args.adaprompt:
+                if 't5' in self.model.config.architectures[0].lower():
+                    self.model.encoder.task_id = task_ids[0]
+                    self.model.decoder.task_id = task_ids[0]
+                # elif 'llama' in self.model.config.architectures[0].lower():
+                else:
+                    self.model.model.task_id = task_ids[0]
+
+            loss, generated_tokens, _ = super().prediction_step(  # ignore the returned labels (may be truncated)
+                model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
+            )
         # if 't5' in model.config.architectures[0].lower():
         #     import pdb;pdb.set_trace()
         # self.tokenizer.decode(inputs["labels"][0][:-2], skip_special_tokens=True) self.tokenizer.decode(inputs["input_ids"][0], skip_special_tokens=True)

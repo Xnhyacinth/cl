@@ -3,9 +3,11 @@ import json
 import os
 import argparse
 import logging
-
+from datasets import load_metric
 from .rouge import rouge_scorer
 from transformers import AutoTokenizer
+from fuzzywuzzy import fuzz
+import re
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,47 @@ def rougeL_score(prediction, ground_truth, xlingual=False):
     return scores["rougeL"].fmeasure
 
 
+def sari_score(inputs, predictions, ground_truths):
+    sari = load_metric("src/llamafactory/train/cl/sari")
+    translation_result = sari.compute(sources=inputs, predictions=predictions, references=[[label] for label in ground_truths])
+    return translation_result
+
+
+def postprocess(code):
+    code = code.replace("<NUM_LIT>", "0").replace("<STR_LIT>", "").replace("<CHAR_LIT>", "")
+    pattern = re.compile(r"<(STR|NUM|CHAR)_LIT:(.*?)>", re.S)
+    lits = re.findall(pattern, code)
+    for lit in lits:
+        code = code.replace(f"<{lit[0]}_LIT:{lit[1]}>", lit[1])
+    return code
+
+
+def caculate_fuzz(results, data):
+    scores = 0
+    for output_id in range(len(results)):
+        prediction = results[output_id]
+        target = data[output_id] 
+        if prediction == "" or target == "":
+            continue
+        scores += fuzz.ratio(prediction, target)
+    avg_score = scores / len(results) 
+    return avg_score
+
+
+def sim_score(predictions, ground_truths):
+    outputs = []
+    for output in predictions:
+        outputs.append(postprocess(output))
+    gts = []
+    for gt in ground_truths:
+        gts.append(postprocess(gt))
+
+    fuzz = caculate_fuzz(outputs, gts)
+    evaluation_result = {"similarity": fuzz}
+    
+    return evaluation_result
+
+
 def metric_max_over_ground_truths(metric_fn, prediction, ground_truths, xlingual=False):
     scores_for_ground_truths = []
     for ground_truth in ground_truths:
@@ -75,7 +118,7 @@ def metric_max_over_ground_truths(metric_fn, prediction, ground_truths, xlingual
     return max(scores_for_ground_truths)
 
 
-def compute_metrics(predictions, references, xlingual=False):
+def compute_metrics(predictions, references, xlingual=False, inputs=None):
     assert len(predictions) == len(references), f"# of predictions {len(predictions)} doesn't match # of references {len(references)}."
     exact_match, rouge1, rougeL = 0, 0, 0
     for pred, gold in zip(predictions, references):
@@ -92,12 +135,14 @@ def compute_metrics(predictions, references, xlingual=False):
     exact_match = 100.0 * exact_match / len(references)
     rouge1 = 100.0 * rouge1 / len(references)
     rougeL = 100.0 * rougeL / len(references)
-    metrics = {"exact_match": exact_match, "rouge1": rouge1, "rougeL": rougeL}
+    sari = sari_score(predictions=predictions, ground_truths=references, inputs=inputs)['sari']
+    sim = sim_score(predictions=predictions, ground_truths=references)['similarity']
+    metrics = {"exact_match": exact_match, "rouge1": rouge1, "rougeL": rougeL, "sari": sari, "similarity": sari}
     metrics = {k: round(v, 4) for k, v in metrics.items()}
     return metrics
 
 
-def compute_grouped_metrics(predictions, references, groups, xlingual=False):
+def compute_grouped_metrics(predictions, references, groups, xlingual=False, inputs=None):
     assert len(predictions) == len(references) == len(groups)
 
     examples_by_group = {}
@@ -109,7 +154,7 @@ def compute_grouped_metrics(predictions, references, groups, xlingual=False):
     results = {}
     for group, group_examples in examples_by_group.items():
         task_predictions, task_references = zip(*group_examples)
-        group_metrics = compute_metrics(task_predictions, task_references, xlingual=xlingual)
+        group_metrics = compute_metrics(task_predictions, task_references, xlingual=xlingual, inputs=inputs)
         for metric, value in group_metrics.items():
             results[f"{metric}_for_{group}"] = value
     return results

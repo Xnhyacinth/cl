@@ -30,7 +30,7 @@ nomlp=${22:-"0"}
 project=${23:-"0"}
 replay=${24:-"0"}
 # bash config/train.sh 1 9 tinyllama order_1 lora 1 1e-4 8 fewshot -1 1e-10 8
-for i in {1..6}; do
+for i in {7..7}; do
     for seed in "${seeds[@]}"; do
         output_prefix=logs/${model}/${tuning_method}/${seed}/order_${i}/${lr_type}_${lr}_${bs}
         if [ "$filter" != "0" ];then

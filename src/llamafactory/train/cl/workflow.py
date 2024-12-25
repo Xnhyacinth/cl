@@ -55,7 +55,8 @@ def run_cl(
     finetuning_args.output_dir = training_args.output_dir
     # import pdb; pdb.set_trace()
     # print(dataset_module['train_dataset'][0])
-    if data_args.select and training_args.do_train:
+    # if data_args.select and training_args.do_train:
+    if data_args.select:
         print(f"Selecting data... {data_args.select}")
         for key in dataset_module:
         # key = 'train_dataset'
@@ -87,17 +88,34 @@ def run_cl(
     def compute_rouge_metrics(dataset, preds, save_prefix=None):
         decoded_preds = skip_instructions(model, preds, tokenizer)
         references = [e["Instance"]["label"] for e in dataset]
-        result = compute_metrics(predictions=decoded_preds, references=references)
+        inputs = [e["Instance"]["instruction"] for e in dataset]
+        result = compute_metrics(predictions=decoded_preds, references=references, inputs=inputs)
         result_per_task = compute_grouped_metrics(predictions=decoded_preds, references=references,
-                                                  groups=dataset["Task"])
+                                                  groups=dataset["Task"], inputs=inputs)
         result.update(result_per_task)
         categories = dataset["Dataset"]
         result_per_category = compute_grouped_metrics(predictions=decoded_preds, references=references,
-                                                      groups=categories)
+                                                      groups=categories, inputs=inputs)
         result.update(result_per_category)
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
+        categories = [ds.lower() for ds in set(categories)]
+        try:
+            if dataset["Task"][0] == 'trace':
+                score = 0
+                if 'py150' in categories:
+                    score += result['similarity_for_py150']
+                if '20minuten' in categories:
+                    score += result['sari_for_20minuten']
+                if 'meetingbank' in categories:
+                    score += result['rougeL_for_meetingbank']
+                for key in 'c-stance,fomc,scienceqa,numglue-cm,numglue-ds'.split(','):
+                    if key in categories:
+                        score += result[f'exact_match_for_{key}']
+                result['avg_score'] = round(score / len(categories), 4)
+        except:
+            result['avg_score'] = result[f'exact_match']
         if save_prefix is not None:
             with open(os.path.join(training_args.output_dir, f"{save_prefix}_eval_predictions.jsonl"), "w") as fout:
                 for example, pred in zip(dataset, decoded_preds):
