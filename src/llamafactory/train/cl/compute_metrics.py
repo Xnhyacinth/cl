@@ -116,24 +116,28 @@ def metric_max_over_ground_truths(metric_fn, prediction, ground_truths, xlingual
     for ground_truth in ground_truths:
         score = metric_fn(prediction, ground_truth, xlingual=xlingual)
         scores_for_ground_truths.append(score)
-    return max(scores_for_ground_truths)
+    try:
+        return max(scores_for_ground_truths)
+    except:
+        return 0
 
 
 def compute_metrics(predictions, references, xlingual=False, inputs=None, group=None, categories=None):
     assert len(predictions) == len(references), f"# of predictions {len(predictions)} doesn't match # of references {len(references)}."
     exact_match, rouge1, rougeL = 0, 0, 0
     for pred, gold in zip(predictions, references):
-        gold = [gold]
         if group == 'scienceqa':
             ori_pred, ori_gold = copy.deepcopy(pred), copy.deepcopy(gold)
             pred = ori_pred[0]
             gold = ori_gold[0]
+        gold = [gold]
         exact_match += metric_max_over_ground_truths(
             exact_match_score, prediction=pred, ground_truths=gold, xlingual=xlingual
         )
         if group == 'scienceqa':
             pred = ori_pred[2:]
             gold = ori_gold[2:]
+            gold = [gold]
         rouge1 += metric_max_over_ground_truths(
             rouge1_score, prediction=pred, ground_truths=gold, xlingual=xlingual
         )

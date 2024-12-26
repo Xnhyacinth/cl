@@ -28,13 +28,17 @@ adaprompt=${22:-"0"}
 reinit=${23:-"0"}
 ortho_mu=${24:-"0"}
 gap_layers=${25:-"4"}
-max_samples=${26:-"1000000"}
+bakebone=${26:-"0"}
+nomlp=${27:-"0"}
+project=${28:-"0"}
+replay=${29:-"0"}
+max_samples=${30:-"1000000"}
 extra_args=""
 save_steps=1000
 cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
-
+max_new_tokens=50
 # bash patch/install.sh
 
 if [ "$lr_scheduler_type" == "constant" ];then
@@ -59,6 +63,10 @@ fi
 if [ "$order" == "order_6" ];then
    orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
 fi
+# trace
+if [ "$order" == "order_7" ];then
+   orders=scienceqa,c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
+fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
 orders=${orders//,/ }
@@ -79,6 +87,7 @@ if [ "$num_gpus" == "1" ] && [ "$bs" != "16" ];then
 fi
 
 let eval_bs=bs*4
+eval_bs=8
 if [ "$eval_bs" -gt 16 ]; then
     eval_bs=16
 fi
@@ -88,6 +97,14 @@ model="${model_name_or_path##*/}"
 if [ "$model" = "llama3-8b" ];then
     model_name_or_path=meta-llama/Meta-Llama-3-8B
     cutoff_len=4096
+fi
+if [ "$model" = "llama3.1-8b" ];then
+    model_name_or_path=meta-llama/Llama-3.1-8B
+    cutoff_len=1024
+    # gradient_accumulation_steps=$((gradient_accumulation_steps / 2))
+    if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
+        cutoff_len=800
+    fi
 fi
 if [ "$model" = "llama3-8b-inst" ];then
     model_name_or_path=meta-llama/Meta-Llama-3-8B-Instruct
@@ -302,6 +319,37 @@ if [ "$gap_layers" != "4" ];then
     eval_path="${eval_path}_gap_layers${gap_layers}"
 fi
 
+if [ "$bakebone" != "0" ];then
+    extra_args="$extra_args --scale_bakebone"
+    save_path="${save_path}_bakebone"
+    run_name="${run_name}_bakebone"
+    merge_path="${merge_path}_bakebone"
+    eval_path="${eval_path}_bakebone"
+fi
+
+if [ "$nomlp" != "0" ];then
+    extra_args="$extra_args --nomlp"
+    save_path="${save_path}_nomlp"
+    run_name="${run_name}_nomlp"
+    merge_path="${merge_path}_nomlp"
+    eval_path="${eval_path}_nomlp"
+fi
+
+if [ "$project" != "0" ];then
+    extra_args="$extra_args --project ${project}"
+    save_path="${save_path}_project${project}"
+    run_name="${run_name}_project${project}"
+    merge_path="${merge_path}_project${project}"
+    eval_path="${eval_path}_project${project}"
+fi
+
+if [ "$replay" != "0" ];then
+    extra_args="$extra_args --replay"
+    save_path="${save_path}_replay"
+    run_name="${run_name}_replay"
+    merge_path="${merge_path}_replay"
+    eval_path="${eval_path}_replay"
+fi
 
 if [ "$mode" == "all" ];then
     # extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
@@ -325,7 +373,7 @@ bs0=${bs}
 cutoff_len0=${cutoff_len}
 gradient_accumulation_steps0=${gradient_accumulation_steps}
 flag=1
-
+# mkdir -p $pwd /modelopsnas/modelops/468440/cl/${save_prefix}
 for part in "${parts[@]}"; do
     echo ""
     for (( i=1; i<=50; i++ ))
@@ -337,16 +385,17 @@ for part in "${parts[@]}"; do
     
     if [ "$idx" == "0" ];then
         eval_dataset="cl_${part}_eval"
+        train_dataset=cl_${part}
     fi
     if [ "$idx" != "0" ];then
+        eval_dataset="${eval_dataset},cl_${part}_eval"
+        train_dataset="${train_dataset},cl_${part}"
         if [ "$finetuning_type" == "lora" ];then
             adapter_name_or_path=${save_prefix}/${idx}-${pre_part}
-            eval_dataset="${eval_dataset},cl_${part}_eval"
             extra_args="${extra_args0} --adapter_name_or_path ${adapter_name_or_path}"
         fi
         if [ "$is_vida" == "True" ];then
             model_name_or_path=${save_prefix}/${idx}-${pre_part}
-            eval_dataset="${eval_dataset},cl_${part}_eval"
             extra_args="${extra_args0}"
         fi
     fi
@@ -356,7 +405,10 @@ for part in "${parts[@]}"; do
     if [ "$filter" != "0" ];then
         dataset="${dataset}_${filter}"
     fi
-
+    if [ "$replay" != "0" ];then
+        dataset=${train_dataset}
+    fi
+    
     ((idx+=1))
     if [ "$mode" == "all" ];then
         extra_args="${extra_args} --dataset ${dataset} --eval_dataset ${eval_dataset}"
@@ -367,7 +419,7 @@ for part in "${parts[@]}"; do
             extra_args="${extra_args} --eval_dataset ${eval_dataset}"
         fi
         if [ "$finetuning_type" == "full" ];then
-            model_name_or_path=google-t5/t5-large
+            model_name_or_path=meta-llama/Llama-2-7b-hf
             extra_args="${extra_args0} --eval_dataset ${eval_dataset}"
         fi
         if [ "$is_vida" == "True" ];then
@@ -410,13 +462,22 @@ for part in "${parts[@]}"; do
     if [ "$part" == "$last_element" ];then
         extra_args="${extra_args}  --do_predict --predict_with_generate"
     fi
-    if [ "$part" == "mnli" ];then
-        flag=0
+    # if [ "$flag" == "1" ];then
+    #     continue
+    # fi
+    if [ "$part" == "c-stance" ] || [ "$part" == "py150" ] || [ "$part" == "numglue-cm" ] || [ "$part" == "numglue-ds" ];then
+        epoch=5
     fi
-    if [ "$flag" == "1" ] && [ "$order" == "order_5" ];then
-        continue
+    if [ "$part" == "meetingbank" ] || [ "$part" == "20minuten" ];then
+        epoch=7
     fi
-    
+    if [ "$part" == "fomc" ] || [ "$part" == "scienceqa" ];then
+        epoch=3
+    fi
+    if [ "$part" == "meetingbank" ] || [ "$part" == "scienceqa" ]|| [ "$part" == "20minuten" ];then
+        max_new_tokens=512
+    fi
+
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"
     echo "save_path: ${save_path}"
@@ -450,7 +511,7 @@ for part in "${parts[@]}"; do
         --num_train_epochs ${epoch} \
         --max_samples ${max_samples} \
         --ddp_timeout 180000000 \
-        --max_new_tokens 50 \
+        --max_new_tokens ${max_new_tokens} \
         --plot_loss \
         --report_to wandb \
         --remove_unused_columns False \
@@ -473,7 +534,7 @@ for part in "${parts[@]}"; do
     fi
 done
 
-echo "mv  ${save_path}"
-bash config/rm.sh ${save_path} safetensors
-sleep 10
+# echo "mv  ${save_path}"
+# bash config/rm.sh ${save_path} safetensors
+sleep 30
 # cp -rf ${save_path} /modelopsnas/modelops/468440/cl/${save_path}
