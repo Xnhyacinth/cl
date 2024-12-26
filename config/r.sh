@@ -6,7 +6,7 @@
 ### 
 
 # bash config/run2.sh 1 1 llama2-7b vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 4
-bash config/run3.sh 1 1 llama2-7b full 1 constant 1e-4 0 eval 30 8 -1 2 16 0 0 4 1 1000
+bash config/run3.sh 1 0 llama2-7b full 1 constant 1e-4 0 eval 30 8 -1 2 16 0 0 4 1 1000
 # bash config/run1.sh 1 7 t5-large vida 1 constant 1e-4 0 all 50 8 -1 2 16 0 0 2
 
 # nohup bash config/run.sh 2 1,2 t5-large vida 2 constant 1e-4 0 all 0 8 -1 4 8 > logs/dd.log 2>&1 &
@@ -54,11 +54,11 @@ bash config/run3.sh 1 1 llama2-7b full 1 constant 1e-4 0 eval 30 8 -1 2 16 0 0 4
 
 # nohup bash config/run.sh 2 8,9 tinyllama lora > logs/b.log 2>&1 &
 # sudo apt install alipay-linkc-zeta-0.14.0 -b current
-# ps -ef |grep _ortho_mu1e7|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep lora|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep train4.sh|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep "2 0,1 t5"|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep migu|grep -v grep |cut -c 9-14|xargs kill -9
-# ps -ef |grep 8,9|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep "2 8,9 t5"|grep -v grep |cut -c 9-14|xargs kill -9
+# ps -ef |grep full|grep -v grep |cut -c 9-16|xargs kill -9
+# ps -ef |grep "2 6,7"|grep -v grep |cut -c 9-14|xargs kill -9
 # ps -ef |grep llama3.1-8b|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep lora|grep -v grep |cut -c 9-16|xargs kill -9
 # ps -ef |grep config/|grep -v grep |cut -c 9-16|xargs kill -9

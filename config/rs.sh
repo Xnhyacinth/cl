@@ -15,7 +15,7 @@ for item in $ranks; do
     #     item=1
     #     r2=16
     # fi
-    bash config/run5.sh 2 8,9 t5-large lora 8 constant 1e-4 0 all 0 $item -1 0 0 0 0 0 0 0 0 0 0 0 1
+    bash config/run5.sh 2 8,9 t5-large lora 16 constant 1e-4 0 all 0 $item -1 0 0 0 0 0 0 0 0 0 0 0 0
     # bash config/run.sh 1 0 llama2-7b vida 4 constant 1e-4 0 all 0 8 -1 $item $r2 0.5 0 8 1 8
 done
 

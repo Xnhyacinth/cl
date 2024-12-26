@@ -24,7 +24,7 @@ for item in $ranks; do
         item=4
         r2=16
     fi
-    bash config/run4.sh 2 6,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 1 2 0 0 0 1
+    bash config/run4.sh 2 6,7 t5-large vida 2 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 4 1 10 4 0 0 0 1
 done
 
 # ranks="5 0"

@@ -42,7 +42,7 @@ from transformers.trainer import *
 from transformers.trainer_callback import TrainerCallback
 
 logger = get_logger(__name__)
-SUPPORTED_DECODER_MODELS = ['codegen', 'bloomz', 'gpt-neox', 'llama']
+SUPPORTED_DECODER_MODELS = ['codegen', 'bloomz', 'gpt-neox', 'llama', 'qwen2']
 ANSWER_PREFIX = "Answer:"
 
 
@@ -326,38 +326,38 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
             self.set_scale(update_model=self.model_ema, high=lambda_high, low=lambda_low)
             # breakpoint()
         task_ids = inputs.pop('task_id')
-        if self.args.adaprompt and len(task_ids) > 1 and task_ids[0] != task_ids[-1]:
-            unique_task_ids = set(task_ids)
-            all_losses = []
-            all_generated_tokens = []
-            logger.info(f'task id diff: {unique_task_ids}')
-            for task_id in unique_task_ids:
-                mask = task_ids == task_id
-                task_specific_inputs = {k: v[mask] for k, v in inputs.items()}
+        if self.args.adaprompt:
+            if task_ids[0] != task_ids[-1]:
+                unique_task_ids = set(task_ids)
+                all_losses = []
+                all_generated_tokens = []
+                # logger.info(f'task id diff: {unique_task_ids}')
+                for task_id in unique_task_ids:
+                    mask = task_ids == task_id
+                    task_specific_inputs = {k: v[mask] for k, v in inputs.items()}
 
-                if 't5' in self.model.config.architectures[0].lower():
-                    self.model.encoder.task_id = task_id
-                    self.model.decoder.task_id = task_id
-                # elif 'llama' in self.model.config.architectures[0].lower():
-                else:
-                    self.model.model.task_id = task_id
+                    if 't5' in self.model.config.architectures[0].lower():
+                        self.model.encoder.task_id = task_id
+                        self.model.decoder.task_id = task_id
+                    # elif 'llama' in self.model.config.architectures[0].lower():
+                    else:
+                        self.model.model.task_id = task_id
 
-                loss, generated_tokens, _ = super().prediction_step(
-                    model, task_specific_inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
-                )
-                # if generated_tokens.shape[-1] < gen_config.max_length:
-                #     generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_config.max_length)
-                # elif gen_config.max_new_tokens is not None and generated_tokens.shape[-1] < gen_config.max_new_tokens + 1:
-                # generated_tokens = self._pad_tensors_to_max_len(generated_tokens, self._gen_kwargs['max_new_tokens'] + 1)
-                all_losses.append(loss)
-                all_generated_tokens.append(generated_tokens)
-            logger.info(f'error gen config: {self._gen_kwargs.copy()}')
-            loss = sum(all_losses)
-            max_len = max([tokens.size(-1) for tokens in all_generated_tokens])
-            all_generated_tokens = [self._pad_tensors_to_max_len(generated_tokens, max_len) for generated_tokens in all_generated_tokens]
-            generated_tokens = torch.cat(all_generated_tokens, dim=0)
-        else:
-            if self.args.adaprompt:
+                    loss, generated_tokens, _ = super().prediction_step(
+                        model, task_specific_inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
+                    )
+                    # if generated_tokens.shape[-1] < gen_config.max_length:
+                    #     generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_config.max_length)
+                    # elif gen_config.max_new_tokens is not None and generated_tokens.shape[-1] < gen_config.max_new_tokens + 1:
+                    # generated_tokens = self._pad_tensors_to_max_len(generated_tokens, self._gen_kwargs['max_new_tokens'] + 1)
+                    all_losses.append(loss)
+                    all_generated_tokens.append(generated_tokens)
+                # logger.info(f'error gen config: {self._gen_kwargs.copy()}')
+                loss = sum(all_losses)
+                max_len = max([tokens.size(-1) for tokens in all_generated_tokens])
+                all_generated_tokens = [self._pad_tensors_to_max_len(generated_tokens, max_len) for generated_tokens in all_generated_tokens]
+                generated_tokens = torch.cat(all_generated_tokens, dim=0)
+            else:
                 if 't5' in self.model.config.architectures[0].lower():
                     self.model.encoder.task_id = task_ids[0]
                     self.model.decoder.task_id = task_ids[0]
@@ -365,6 +365,10 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
                 else:
                     self.model.model.task_id = task_ids[0]
 
+                loss, generated_tokens, _ = super().prediction_step(  # ignore the returned labels (may be truncated)
+                    model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
+                )
+        else:
             loss, generated_tokens, _ = super().prediction_step(  # ignore the returned labels (may be truncated)
                 model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
             )

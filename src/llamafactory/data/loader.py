@@ -181,6 +181,8 @@ def _get_merged_dataset(
             random_indices = random.sample(range(total_num_examples), int(total_num_examples * 0.02))
             logger.info(f'len random select: {len(random_indices)} for {dataset_attr.dataset_name}')
             datasets.append(train_dataset.select(random_indices))
+        elif data_args.select:
+            datasets.append(_load_single_dataset(dataset_attr, model_args, data_args, training_args).select(range(data_args.select)))
         else:
             datasets.append(_load_single_dataset(dataset_attr, model_args, data_args, training_args))
 

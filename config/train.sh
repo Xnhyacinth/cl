@@ -66,7 +66,6 @@ fi
 # trace
 if [ "$order" == "order_7" ];then
    orders=c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
-   max_new_tokens=512
 fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
@@ -374,7 +373,7 @@ bs0=${bs}
 cutoff_len0=${cutoff_len}
 gradient_accumulation_steps0=${gradient_accumulation_steps}
 flag=1
-
+# mkdir -p $pwd /modelopsnas/modelops/468440/cl/${save_prefix}
 for part in "${parts[@]}"; do
     echo ""
     for (( i=1; i<=50; i++ ))
@@ -474,6 +473,9 @@ for part in "${parts[@]}"; do
     fi
     if [ "$part" == "fomc" ] || [ "$part" == "scienceqa" ];then
         epoch=3
+    fi
+    if [ "$part" == "meetingbank" ] || [ "$part" == "scienceqa" ]|| [ "$part" == "20minuten" ];then
+        max_new_tokens=512
     fi
 
     echo "model_name_or_path: ${model_name_or_path}"

@@ -56,12 +56,12 @@ def run_cl(
     # import pdb; pdb.set_trace()
     # print(dataset_module['train_dataset'][0])
     # if data_args.select and training_args.do_train:
-    if data_args.select:
-        print(f"Selecting data... {data_args.select}")
-        for key in dataset_module:
-        # key = 'train_dataset'
-            dataset_module[key] = dataset_module[key].shuffle(seed=training_args.seed).select(range(min(len(dataset_module[key]), data_args.select)))
-        print(dataset_module)
+    # if data_args.select:
+    #     print(f"Selecting data... {data_args.select}")
+    #     for key in dataset_module:
+    #     # key = 'train_dataset'
+    #         dataset_module[key] = dataset_module[key].shuffle(seed=training_args.seed).select(range(min(len(dataset_module[key]), data_args.select)))
+    #     print(dataset_module)
         # breakpoint()
         # import pdb; pdb.set_trace()
     model = load_model(tokenizer, model_args, finetuning_args, training_args.do_train)
@@ -89,11 +89,11 @@ def run_cl(
         decoded_preds = skip_instructions(model, preds, tokenizer)
         references = [e["Instance"]["label"] for e in dataset]
         inputs = [e["Instance"]["instruction"] for e in dataset]
-        result = compute_metrics(predictions=decoded_preds, references=references, inputs=inputs)
+        categories = dataset["Dataset"]
+        result = compute_metrics(predictions=decoded_preds, references=references, inputs=inputs, categories=categories)
         result_per_task = compute_grouped_metrics(predictions=decoded_preds, references=references,
                                                   groups=dataset["Task"], inputs=inputs)
         result.update(result_per_task)
-        categories = dataset["Dataset"]
         result_per_category = compute_grouped_metrics(predictions=decoded_preds, references=references,
                                                       groups=categories, inputs=inputs)
         result.update(result_per_category)

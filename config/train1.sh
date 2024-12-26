@@ -63,11 +63,9 @@ fi
 if [ "$order" == "order_6" ];then
    orders=yelp,amazon,mnli,cb,copa,qqp,rte,imdb,sst-2,dbpedia,agnews,yahoo,multirc,boolqa,wic
 fi
-
 # trace
 if [ "$order" == "order_7" ];then
    orders=c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
-   max_new_tokens=512
 fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
@@ -103,6 +101,7 @@ fi
 if [ "$model" = "llama3.1-8b" ];then
     model_name_or_path=meta-llama/Llama-3.1-8B
     cutoff_len=1024
+    # gradient_accumulation_steps=$((gradient_accumulation_steps / 2))
     if [ "$adaprompt" != "0" ] && [ "$restore" != "0" ];then
         cutoff_len=800
     fi
@@ -354,6 +353,7 @@ fi
 
 if [ "$mode" == "all" ];then
     extra_args="${extra_args} --do_train --do_predict --predict_with_generate"
+    # extra_args="${extra_args} --do_train"
 fi
 
 if [ "$mode" == "eval" ];then
@@ -383,7 +383,7 @@ for part in "${parts[@]}"; do
     echo ""
     echo "$part"
     
-   if [ "$idx" == "0" ];then
+    if [ "$idx" == "0" ];then
         eval_dataset="cl_${part}_eval"
         train_dataset=cl_${part}
     fi
@@ -408,7 +408,7 @@ for part in "${parts[@]}"; do
     if [ "$replay" != "0" ];then
         dataset=${train_dataset}
     fi
-
+    
     ((idx+=1))
     if [ "$mode" == "all" ];then
         extra_args="${extra_args} --dataset ${dataset} --eval_dataset ${eval_dataset}"
@@ -419,7 +419,7 @@ for part in "${parts[@]}"; do
             extra_args="${extra_args} --eval_dataset ${eval_dataset}"
         fi
         if [ "$finetuning_type" == "full" ];then
-            model_name_or_path=google-t5/t5-large
+            model_name_or_path=meta-llama/Llama-2-7b-hf
             extra_args="${extra_args0} --eval_dataset ${eval_dataset}"
         fi
         if [ "$is_vida" == "True" ];then
@@ -459,13 +459,10 @@ for part in "${parts[@]}"; do
             fi
         fi
     fi
-    # if [ "$scale" != "0" ];then
-    #     cutoff_len=512
-    # fi
     # if [ "$flag" == "1" ];then
     #     continue
     # fi
-     if [ "$part" == "c-stance" ] || [ "$part" == "py150" ] || [ "$part" == "numglue-cm" ] || [ "$part" == "numglue-ds" ];then
+    if [ "$part" == "c-stance" ] || [ "$part" == "py150" ] || [ "$part" == "numglue-cm" ] || [ "$part" == "numglue-ds" ];then
         epoch=5
     fi
     if [ "$part" == "meetingbank" ] || [ "$part" == "20minuten" ];then
@@ -474,7 +471,10 @@ for part in "${parts[@]}"; do
     if [ "$part" == "fomc" ] || [ "$part" == "scienceqa" ];then
         epoch=3
     fi
-    
+    if [ "$part" == "meetingbank" ] || [ "$part" == "scienceqa" ]|| [ "$part" == "20minuten" ];then
+        max_new_tokens=512
+    fi
+
     echo "model_name_or_path: ${model_name_or_path}"
     echo "template: ${template}"
     echo "save_path: ${save_path}"
