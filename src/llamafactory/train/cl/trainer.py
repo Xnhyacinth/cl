@@ -328,7 +328,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         task_ids = inputs.pop('task_id')
         if self.args.adaprompt:
             if task_ids[0] != task_ids[-1]:
-                unique_task_ids = set(task_ids)
+                unique_task_ids = set(task_ids.tolist())
                 all_losses = []
                 all_generated_tokens = []
                 # logger.info(f'task id diff: {unique_task_ids}')
