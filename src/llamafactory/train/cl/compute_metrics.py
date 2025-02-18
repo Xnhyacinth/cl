@@ -128,16 +128,21 @@ def compute_metrics(predictions, references, xlingual=False, inputs=None, group=
     for pred, gold in zip(predictions, references):
         if group == 'scienceqa':
             ori_pred, ori_gold = copy.deepcopy(pred), copy.deepcopy(gold)
-            pred = ori_pred[0]
+            if len(ori_pred) > 1:
+                pred = ori_pred[0]
+            else:
+                pred = ori_pred
             gold = ori_gold[0]
         gold = [gold]
         exact_match += metric_max_over_ground_truths(
             exact_match_score, prediction=pred, ground_truths=gold, xlingual=xlingual
         )
         if group == 'scienceqa':
-            pred = ori_pred[2:]
-            gold = ori_gold[2:]
-            gold = [gold]
+            if len(ori_pred) > 2:
+                pred = ori_pred[2:]
+            else:
+                pred = ori_pred
+            gold = [ori_gold[2:]]
         rouge1 += metric_max_over_ground_truths(
             rouge1_score, prediction=pred, ground_truths=gold, xlingual=xlingual
         )

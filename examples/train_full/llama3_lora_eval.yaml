@@ -1,0 +1,18 @@
+### model
+model_name_or_path:  saves/llama2-7b/vida/sft/order_1/42/constant_vida4_vida8_adaprompt4/4-agnews #meta-llama/Meta-Llama-3-8B-Instruct meta-llama/Llama-2-7b-hf   meta-llama/Llama-3.1-8B
+# adapter_name_or_path: saves/llama2-7b/lora/sft/order_1/42/constant/4-agnews
+
+### method
+finetuning_type: vida
+
+### dataset
+task: mmlu_test  # choices: [mmlu_test, ceval_validation, cmmlu_test]
+template: fewshot
+lang: en
+n_shot: 5
+
+### output
+save_dir: saves/llama2-7b/lora/sft/order_1/42/constant/4-agnews/eval_vida
+
+### eval
+batch_size: 4

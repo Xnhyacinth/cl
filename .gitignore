@@ -170,3 +170,6 @@ wandb/
 saves0/
 Long/
 logs/
+logs0/
+r.sh
+config/*

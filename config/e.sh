@@ -26,7 +26,7 @@ for item in $ranks; do
     fi
     # bash config/run.sh 1 0 llama2-7b lora 16 constant 1e-4 0 all 0 8 -1
     # bash config/run5.sh 1 0 llama3.1-8b vida 1 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 1 2 0 0 16
-    bash config/run4.sh 1 0 llama2-7b vida 1 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 1 2 0 1
+    bash config/run4.sh 1 1 llama2-7b vida 1 constant 1e-4 0 all 0 8 -1 $item $r2 0 0 8 1 1 2 0 1
 done
 
 # # nohup bash config/e.sh > logs/llama_e.log 2>&1 &

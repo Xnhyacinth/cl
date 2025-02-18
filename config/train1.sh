@@ -365,6 +365,10 @@ if [ "$mode" == "eval" ];then
     eval_path="${eval_path}_${mode}"
 fi
 
+if [[ $model_name_or_path != *t5* ]]; then
+    extra_args="${extra_args} --flash_attn fa2"
+fi
+
 save_prefix=${save_path}
 extra_args0=${extra_args}
 # Train

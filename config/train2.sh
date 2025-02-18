@@ -34,13 +34,17 @@ project=${28:-"0"}
 replay=${29:-"0"}
 max_samples=${30:-"1000000"}
 extra_args=""
-save_steps=1000
+save_steps=10000
 cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
 max_new_tokens=50
 # bash patch/install.sh
-
+random_port=$((RANDOM%(65535-1024+1)+1024))
+while [[ $(ss -tln | grep ":$random_port") ]]; do
+    random_port=$((RANDOM%(65535-1024+1)+1024))
+done
+export MASTER_PORT=${random_port}
 if [ "$lr_scheduler_type" == "constant" ];then
    warmup_ratio=0.00
 fi
@@ -65,7 +69,7 @@ if [ "$order" == "order_6" ];then
 fi
 # trace
 if [ "$order" == "order_7" ];then
-   orders=scienceqa,c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
+   orders=c-stance,fomc,meetingbank,py150,scienceqa,numglue-cm,numglue-ds,20minuten
 fi
 last_element=$(echo $orders | awk -F ',' '{print $NF}')
 IFS=',' read -r -a parts <<< "$orders"
@@ -365,6 +369,10 @@ if [ "$mode" == "eval" ];then
     eval_path="${eval_path}_${mode}"
 fi
 
+if [[ $model_name_or_path != *t5* ]]; then
+    extra_args="${extra_args} --flash_attn fa2"
+fi
+
 save_prefix=${save_path}
 extra_args0=${extra_args}
 # Train
@@ -462,9 +470,18 @@ for part in "${parts[@]}"; do
     if [ "$part" == "$last_element" ];then
         extra_args="${extra_args}  --do_predict --predict_with_generate"
     fi
-    # if [ "$flag" == "1" ];then
-    #     continue
+    # if [ "$part" == "amazon" ] && [ "$order" == "order_4" ];then
+    #     flag=0
     # fi
+    if [ "$part" == "amazon" ];then
+        flag=0
+    fi
+    if [ "$order" == "order_5" ];then
+        flag=0
+    fi
+    if [ "$flag" == "1" ];then
+        continue
+    fi
     if [ "$part" == "c-stance" ] || [ "$part" == "py150" ] || [ "$part" == "numglue-cm" ] || [ "$part" == "numglue-ds" ];then
         epoch=5
     fi
@@ -524,6 +541,7 @@ for part in "${parts[@]}"; do
     bash config/rm.sh ${save_path} checkpoint
     if [[ $succ != *true* ]]; then
         echo "${part} error!"
+        # cp -rf ${mvpath} /modelopsnas/modelops/468440/cl/${mvpath}
         exit 1
     fi
     if [ "$idx" -gt 1 ]; then

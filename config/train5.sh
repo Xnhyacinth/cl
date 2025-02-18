@@ -34,13 +34,17 @@ project=${28:-"0"}
 replay=${29:-"0"}
 max_samples=${30:-"1000000"}
 extra_args=""
-save_steps=1000
+save_steps=10000
 cutoff_len=2048
 gradient_accumulation_steps=1
 warmup_ratio=0.05
 max_new_tokens=50
 # bash patch/install.sh
-
+random_port=$((RANDOM%(65535-1024+1)+1024))
+while [[ $(ss -tln | grep ":$random_port") ]]; do
+    random_port=$((RANDOM%(65535-1024+1)+1024))
+done
+export MASTER_PORT=${random_port}
 if [ "$lr_scheduler_type" == "constant" ];then
    warmup_ratio=0.00
 fi
@@ -87,7 +91,7 @@ if [ "$num_gpus" == "1" ] && [ "$bs" != "16" ];then
 fi
 
 let eval_bs=bs*4
-eval_bs=8
+eval_bs=4
 if [ "$eval_bs" -gt 16 ]; then
     eval_bs=16
 fi
@@ -365,6 +369,10 @@ if [ "$mode" == "eval" ];then
     eval_path="${eval_path}_${mode}"
 fi
 
+if [[ $model_name_or_path != *t5* ]]; then
+    extra_args="${extra_args} --flash_attn fa2"
+fi
+
 save_prefix=${save_path}
 extra_args0=${extra_args}
 # Train
@@ -461,6 +469,8 @@ for part in "${parts[@]}"; do
     fi
     if [ "$part" == "$last_element" ];then
         extra_args="${extra_args}  --do_predict --predict_with_generate"
+    fi
+    if [ "$part" == "meetingbank" ];then
         flag=0
     fi
     if [ "$flag" == "1" ];then
@@ -477,6 +487,7 @@ for part in "${parts[@]}"; do
     fi
     if [ "$part" == "meetingbank" ] || [ "$part" == "scienceqa" ]|| [ "$part" == "20minuten" ];then
         max_new_tokens=512
+        cutoff_len=800
     fi
 
     echo "model_name_or_path: ${model_name_or_path}"
@@ -525,6 +536,7 @@ for part in "${parts[@]}"; do
     bash config/rm.sh ${save_path} checkpoint
     if [[ $succ != *true* ]]; then
         echo "${part} error!"
+        # cp -rf ${mvpath} /modelopsnas/modelops/468440/cl/${mvpath}
         exit 1
     fi
     if [ "$idx" -gt 1 ]; then
